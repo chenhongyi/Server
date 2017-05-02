@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26403.7
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "Server", "Server\Server.sfproj", "{074CDCD0-88C0-4016-A12E-6098FD76CECB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogicServer", "LogicServer\LogicServer.csproj", "{D2E43A91-5135-47FF-9780-C0E1C03890DC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{074CDCD0-88C0-4016-A12E-6098FD76CECB}.Debug|x64.ActiveCfg = Debug|x64
+		{074CDCD0-88C0-4016-A12E-6098FD76CECB}.Debug|x64.Build.0 = Debug|x64
+		{074CDCD0-88C0-4016-A12E-6098FD76CECB}.Debug|x64.Deploy.0 = Debug|x64
+		{074CDCD0-88C0-4016-A12E-6098FD76CECB}.Release|x64.ActiveCfg = Release|x64
+		{074CDCD0-88C0-4016-A12E-6098FD76CECB}.Release|x64.Build.0 = Release|x64
+		{074CDCD0-88C0-4016-A12E-6098FD76CECB}.Release|x64.Deploy.0 = Release|x64
+		{D2E43A91-5135-47FF-9780-C0E1C03890DC}.Debug|x64.ActiveCfg = Debug|x64
+		{D2E43A91-5135-47FF-9780-C0E1C03890DC}.Debug|x64.Build.0 = Debug|x64
+		{D2E43A91-5135-47FF-9780-C0E1C03890DC}.Release|x64.ActiveCfg = Release|x64
+		{D2E43A91-5135-47FF-9780-C0E1C03890DC}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
