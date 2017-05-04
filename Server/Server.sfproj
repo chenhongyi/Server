@@ -27,10 +27,13 @@
     <None Include="Scripts\Deploy-FabricApplication.ps1" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="app.config" />
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Account\Account.csproj" />
     <ProjectReference Include="..\LogicServer\LogicServer.csproj" />
+    <ProjectReference Include="..\PublicGate\PublicGate.csproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
   <PropertyGroup>

@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Runtime;
+using System.Net;
+using Shared.Logging;
 
 namespace LogicServer
 {
@@ -19,6 +21,13 @@ namespace LogicServer
                 // 注册服务会将服务类型名称映射到 .NET 类型。
                 // 在 Service Fabric 创建此服务类型的实例时，
                 // 会在此主机进程中创建类的实例。
+
+                ThreadPool.SetMinThreads(10000, 500);
+                ServicePointManager.DefaultConnectionLimit = int.MaxValue;
+                ServicePointManager.UseNagleAlgorithm = false;
+                ServicePointManager.Expect100Continue = false;
+
+                LoggingSource.Initialize(ServiceEventSource.Current.Message);
 
                 ServiceRuntime.RegisterServiceAsync("LogicServerType",
                     context => new LogicServer(context)).GetAwaiter().GetResult();

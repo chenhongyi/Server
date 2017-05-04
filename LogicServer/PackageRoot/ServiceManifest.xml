@@ -29,7 +29,7 @@
            请注意，如果你的服务已分区，
            与位于代码中的各分区的副本共享此端口。-->
       <Endpoint Name="ServiceEndpoint" />
-
+      <Endpoint Name="WsServiceEndpoint" Type="Input" Protocol="http" />
       <!-- 复制器使用此终结点来复制服务的状态。
            此终结点是使用 ConfigPackage 下 Settings.xml 文件中的 ReplicatorSettings 配置节
            进行配置的。 -->
