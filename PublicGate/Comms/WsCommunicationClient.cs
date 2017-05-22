@@ -40,6 +40,21 @@ namespace PublicGate.Comms
 
         public ResolvedServiceEndpoint Endpoint { get; set; }
 
+
+        public async Task SendReceiveAsync(string msg)
+        {
+            byte[] receiveBytes = new byte[1024];
+            await this.clientWebSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(msg)), WebSocketMessageType.Text, true, CancellationToken.None);
+            //WebSocketReceiveResult receiveResult =
+            //   await this.clientWebSocket.ReceiveAsync(new ArraySegment<byte>(receiveBytes), CancellationToken.None);
+            //using (MemoryStream ms = new MemoryStream())
+            //{
+            //    await ms.WriteAsync(receiveBytes, 0, receiveResult.Count);
+            //    ms.ToArray();
+            //}
+        }
+
+
         public async Task<byte[]> SendReceiveAsync(byte[] requestMsg)
         {
             byte[] receiveBytes = new byte[10240];

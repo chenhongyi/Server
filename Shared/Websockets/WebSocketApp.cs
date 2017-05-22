@@ -1,5 +1,7 @@
 ﻿using Logging;
+using LogicServer.Interface;
 using Model;
+using Model.MsgQueue;
 using Shared.Serializers;
 using SuperSocket.SocketBase;
 using SuperSocket.WebSocket;
@@ -13,66 +15,42 @@ using System.Threading.Tasks;
 
 namespace Shared.Websockets
 {
-    public class WebSocketApp : IDisposable
+    public class WebSocketApp
     {
         private static readonly ILogger Logger = LoggerFactory.GetLogger(nameof(WebSocketApp));
         private readonly Func<IWebSocketConnectionHandler> createConnectionHandler;
-        private static readonly byte[] UncaughtHttpBytes =
-            Encoding.Default.GetBytes("主循环中产生一个未捕获的异常!");
-        IWsSerializer pserializer;
-        ProtobufWsSerializer mserializer;
         private WebSocketServer _ws;
         private string address;
         private int port;
         private CancellationToken cancellationToken;
         private CancellationTokenSource cancellationTokenSource;
-        private HttpListener httpListener;
+        IWebSocketConnectionHandler handler;
+        private Timer _timerMsgQueue;
+        private readonly ILogicServer _msgQueue;
+
 
         public WebSocketApp(Func<IWebSocketConnectionHandler> createConnectionHandler, string address = "127.0.0.1", int port = 5555)
         {
+
             this.createConnectionHandler = createConnectionHandler;
-            this.mserializer = new ProtobufWsSerializer();
-            this.pserializer = SerializerFactory.CreateSerializer();
+            handler = this.createConnectionHandler();
             this.address = address;
             this.port = port;
             this.cancellationTokenSource = new CancellationTokenSource();
+            _msgQueue = ConnectionFactory.CreateLogicService();
+            this._ws = new WebSocketServer();
+            if (_ws.Setup(this.port))
+            {
+                _ws.Start();
+            }
+            _ws.NewSessionConnected += OnClientConnected;
+            _ws.NewMessageReceived += OnMessageReceived;
+            _ws.NewDataReceived += OnDataReceivedAsync;
+            _ws.SessionClosed += OnClientClosed;
+          //  _timerMsgQueue = new Timer(new TimerCallback(GetMsg), this, 0, 800);
         }
 
-        public void Dispose()
-        {
-            Logger.Debug("释放资源，清理内存");
 
-            try
-            {
-                if (this.cancellationTokenSource != null && !this.cancellationTokenSource.IsCancellationRequested)
-                {
-                    this.cancellationTokenSource.Cancel();
-                }
-
-                if (this.httpListener != null && this.httpListener.IsListening)
-                {
-                    this.httpListener.Stop();
-                    this.httpListener.Close();
-                }
-
-                if (this.cancellationTokenSource != null && !this.cancellationTokenSource.IsCancellationRequested)
-                {
-                    this.cancellationTokenSource.Dispose();
-                }
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-            catch (AggregateException ae)
-            {
-                ae.Handle(
-                    ex =>
-                    {
-                        Logger.Error(ex, nameof(this.Dispose));
-                        return true;
-                    });
-            }
-        }
 
         public void Init()
         {
@@ -80,37 +58,8 @@ namespace Shared.Websockets
             {
                 this.address += "/";
             }
-            this._ws = new WebSocketServer();
-            _ws.NewSessionConnected += OnClientConnected;
-            _ws.NewMessageReceived += OnMessageReceived;
-            _ws.NewDataReceived += OnDataReceived;
-            _ws.SessionClosed += OnClientClosed;
-
-            if (this._ws.Setup(this.port))
-            {
-                this._ws.Start();
-            }
-            //this.httpListener = new HttpListener();
-            //this.httpListener.Prefixes.Add(this.address);
-            this.cancellationTokenSource = new CancellationTokenSource();
-            //this.cancellationToken = this.cancellationTokenSource.Token;
-            //this.httpListener.Start();
         }
 
-
-        /// <summary>
-        /// 定时执行  主动去逻辑服务器取消息队列  拿回来进行发送
-        /// </summary>
-        /// <param name="session"></param>
-        /// <param name="data"></param>
-        public void SendToAllClients(WebSocketSession session)
-        {
-            byte[] data = null;
-            foreach (var item in session.AppServer.GetAllSessions())
-            {
-                item.Send(data, 0, data.Length);
-            }
-        }
 
 
         /// <summary>
@@ -121,7 +70,7 @@ namespace Shared.Websockets
         public void OnClientClosed(WebSocketSession session, CloseReason value)
         {
             //TODO：客户端断开处理
-
+            SessionPool.Instance.OPool(session);
         }
 
         /// <summary>
@@ -129,12 +78,12 @@ namespace Shared.Websockets
         /// </summary>
         /// <param name="session"></param>
         /// <param name="value"></param>
-        public void OnDataReceived(WebSocketSession session, byte[] value)
+        public async void OnDataReceivedAsync(WebSocketSession session, byte[] value)
         {
-            IWebSocketConnectionHandler handler = this.createConnectionHandler();
+
             //收到数据处理 
             //对数据 value 进行 protobuf解包处理 验证sign  对于sign不正确的 直接返回  保留正确的包继续逻辑
-            WsRequestMessage mrequest = mserializer.DeserializeAsync<WsRequestMessage>(value).Result;
+            WsRequestMessage mrequest = InitHelpers.GetMse().DeserializeAsync<WsRequestMessage>(value).Result;
             //if (!mrequest.SignKey.Equals(CheckSign(sign)))
             //{
             //TODO 验证处理
@@ -144,7 +93,8 @@ namespace Shared.Websockets
             try
             {
                 // dispatch to App provided function with requested
-                wsresponse = handler.ProcessWsMessageAsync(value, session.SessionID, cancellationToken).Result;
+                //  wsresponse = handler.ProcessWsMessageAsync(value, session.SessionID, cancellationToken).Result;
+                wsresponse = _msgQueue.ProcessWsMessageAsync1(value, session.SessionID, cancellationToken).Result;
             }
             catch (Exception ex)
             {
@@ -153,7 +103,7 @@ namespace Shared.Websockets
                     new WsResponseMessage
                     {
                         MsgId = 0,
-                        Result = WsResult.Error,
+                        Result = (int)WsResult.Error,
                         Value = Encoding.UTF8.GetBytes(ex.Message)
                     }).Result;
             }
@@ -169,17 +119,7 @@ namespace Shared.Websockets
 
         public void OnMessageReceived(WebSocketSession session, string value)
         {
-            byte[] wsresponse = null;
-            wsresponse = new ProtobufWsSerializer().SerializeAsync(
-                    new WsResponseMessage
-                    {
-                        MsgId = 0,
-                        Result = WsResult.Success,
-                        Value = Encoding.UTF8.GetBytes("测试文本消息")
-                    }).Result;
-            session.Send(wsresponse, 0, wsresponse.Length);
-
-            //TODO: 收到文本消息处理
+            handler.ProcessWsMessageAsync(value, cancellationToken);
         }
 
 
@@ -189,89 +129,109 @@ namespace Shared.Websockets
         /// <param name="session"></param>
         public void OnClientConnected(WebSocketSession session)
         {
-            //byte[] wsresponse = null;
-            //wsresponse = new ProtobufWsSerializer().SerializeAsync(
-            //        new WsResponseMessage
-            //        {
-            //            Result = WsResult.Success,
-            //            Value = null
-            //        }).Result;
-            //session.Send(wsresponse, 0, wsresponse.Length);
-            //TODO 客户端连接处理
-            //预处理
-        }
+            SessionPool.Instance.IPool(session);
 
-        /// <summary>
-        /// 消息分发处理线程
-        /// </summary>
-        /// <param name="processActionAsync">回调函数</param>
-        /// <returns></returns>
-        public async Task StartAsync(Func<CancellationToken, HttpListenerContext, Task<bool>> processActionAsync)
-        {
-            //while (this.httpListener.IsListening)
-            //{
-            //    HttpListenerContext context = null;
-            //    try
-            //    {
-            //        context = await this.httpListener.GetContextAsync();
-            //        Logger.Debug("GetContextAsync complete");
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        // check if the exception is caused due to cancellation
-            //        if (this.cancellationToken.IsCancellationRequested)
-            //        {
-            //            return;
-            //        }
-
-            //        Logger.Error(ex, "Error in GetContextAsync");
-            //        continue;
-            //    }
-            //while (_ws.State == ServerState.Running)
-            //{
-
-
-
-            //    if (this.cancellationToken.IsCancellationRequested)
-            //    {
-            //        return;
-            //    }
-
-
-            //    this.DispatchConnectedContext(context, processActionAsync);
-            //}
         }
 
 
-        /// <summary>
-        /// 新的连接已经建立，分发请求到回调函数 
-        /// </summary>
-        /// <param name="context">连接用户</param>
-        /// <param name="processActionAsync">处理函数</param>
-        private void DispatchConnectedContext(HttpListenerContext context, Func<CancellationToken, HttpListenerContext, Task<bool>> processActionAsync)
+
+        public static void SendMsgToAllClients(MsgQueueList msg)
         {
-            // do not await on processAction since we don't want to block on waiting for more connections
-            processActionAsync(this.cancellationToken, context)
-                .ContinueWith(
-                    t =>
+            try
+            {
+                var data = msg.Data;
+                var sessions = SessionPool.Instance.GetAll();
+                if (sessions != null)
+                {
+                    foreach (var sid in sessions.Values)
                     {
-                        if (t.IsFaulted)
+                        if (sid != null)
                         {
-                            Logger.Error(t.Exception, "processAction did not handle their exceptions");
-                            try
+                            if (sid.Connected)
                             {
-                                context.Response.ContentLength64 = UncaughtHttpBytes.Length;
-                                context.Response.StatusCode = 500;
-                                context.Response.OutputStream.Write(UncaughtHttpBytes, 0, UncaughtHttpBytes.Length);
-                                context.Response.OutputStream.Close();
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger.Error(ex, "Couldn't write the 500 for misbehaving user");
+                                sid.Send(data, 0, data.Length);
                             }
                         }
-                    },
-                    this.cancellationToken);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
         }
+
+        public static void SendMsgToClients(MsgQueueList msg)
+        {
+            try
+            {
+                var data = msg.Data;
+                var sessions = SessionPool.Instance.GetAll();
+                if (sessions == null)
+                {
+                    return;
+                }
+                if (msg.Roles.Any())
+                {
+                    foreach (var session in sessions.Values)
+                    {
+                        if (session != null)
+                        {
+                            if (session.Connected)
+                            {
+                                foreach (var roleSession in msg.Roles)
+                                {
+                                    if (roleSession == session.SessionID)
+                                    {
+                                        session.Send(data, 0, data.Length);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+        public static void SendMsgToSignleClient(MsgQueueList msg)
+        {
+            try
+            {
+                var data = msg.Data;
+                if (msg == null)
+                {
+                    return;
+                }
+                if (msg.Roles.Any())
+                {
+                    foreach (var item in msg.Roles)
+                    {
+                        var session = SessionPool.Instance.GetSid(item);
+                        //  var sid = this._ws.GetSessionByID(item);
+                        if (session != null)
+                        {
+                            if (session.Connected)
+                            {
+                                session.Send(data, 0, data.Length);
+                            }
+                        }
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+
     }
 }

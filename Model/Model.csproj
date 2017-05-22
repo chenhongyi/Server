@@ -16,18 +16,20 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\..\..\..\..\DebugServer\Common\Model\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\..\..\..\..\ReleaseServer\Common\Model\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
@@ -51,9 +53,13 @@
     <Reference Include="SuperSocket.SocketService, Version=1.6.6.1, Culture=neutral, PublicKeyToken=6c80000676988ebb, processorArchitecture=MSIL">
       <HintPath>..\packages\SuperSocket.Engine.1.6.6.1\lib\net45\SuperSocket.SocketService.exe</HintPath>
     </Reference>
+    <Reference Include="SuperSocket.WebSocket">
+      <HintPath>..\..\..\..\..\DebugServer\PublicGate\SuperSocket.WebSocket.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -62,8 +68,51 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Account.cs" />
-    <Compile Include="AccountResult.cs" />
+    <Compile Include="AutoDatas\CompanyInfo.cs" />
+    <Compile Include="AutoDatas\DepartmentInfo.cs" />
+    <Compile Include="AutoDatas\LocalString.cs" />
+    <Compile Include="BaseResponseData.cs" />
+    <Compile Include="Data\Account\Account.cs" />
+    <Compile Include="Data\Business\Company.cs" />
+    <Compile Include="Data\Business\Department.cs" />
+    <Compile Include="Data\Business\Employee.cs" />
+    <Compile Include="Data\General\Item.cs" />
+    <Compile Include="Data\Npc\UserAttr.cs" />
+    <Compile Include="Data\Npc\IdRole.cs" />
+    <Compile Include="Data\Npc\Bag.cs" />
+    <Compile Include="MsgQueue\MsgQueueList.cs" />
+    <Compile Include="RequestData\AddItemReq.cs" />
+    <Compile Include="RequestData\ChangeAvatarReq.cs" />
+    <Compile Include="RequestData\CompanyLvUpReq.cs" />
+    <Compile Include="RequestData\CreateCompanyReq.cs" />
+    <Compile Include="RequestData\DeleteRoleReq.cs" />
+    <Compile Include="RequestData\DepartmentUpdateReq.cs" />
+    <Compile Include="RequestData\JoinGameReq.cs" />
+    <Compile Include="RequestData\RemoveItemReq.cs" />
+    <Compile Include="RequestData\SellItemReq.cs" />
+    <Compile Include="RequestData\TestReq.cs" />
+    <Compile Include="RequestData\UseItemReq.cs" />
+    <Compile Include="ResponseData\AddItemResult.cs" />
+    <Compile Include="ResponseData\ChangeAvatarResult.cs" />
+    <Compile Include="ResponseData\CompanyLvUpResult.cs" />
+    <Compile Include="ResponseData\ConnectingResult.cs" />
+    <Compile Include="ResponseData\CreateCompanyResult.cs" />
+    <Compile Include="ResponseData\CreateRoleResult.cs" />
+    <Compile Include="ResponseData\DeleteRoleResult.cs" />
+    <Compile Include="ResponseData\DepartmentUpdateResult.cs" />
+    <Compile Include="ResponseData\father\ItemBase.cs" />
+    <Compile Include="ResponseData\JoinGameResult.cs" />
+    <Compile Include="ResponseData\RemoveItemResult.cs" />
+    <Compile Include="ResponseData\SellItemResult.cs" />
+    <Compile Include="ResponseData\TCLevelUpResult.cs" />
+    <Compile Include="ResponseData\TCRoleBagChangeResult.cs" />
+    <Compile Include="ResponseData\TCRoleInfoChangeResult.cs" />
+    <Compile Include="ResponseData\TestResult.cs" />
+    <Compile Include="ResponseData\UpdateAvatarResult.cs" />
+    <Compile Include="ResponseData\UpdateShenjiaResult.cs" />
+    <Compile Include="ResponseData\UseItemResult.cs" />
+    <Compile Include="ServiceConst.cs" />
+    <Compile Include="ViewModels\AccountResult.cs" />
     <Compile Include="AutoDatas\AutoData.cs" />
     <Compile Include="AutoDatas\Avatar.cs" />
     <Compile Include="AutoDatas\Character.cs" />
@@ -71,15 +120,16 @@
     <Compile Include="AutoDatas\Item.cs" />
     <Compile Include="AutoDatas\Level.cs" />
     <Compile Include="AutoDatas\Roomfurniture.cs" />
-    <Compile Include="BaseResponse.cs" />
-    <Compile Include="Login.cs" />
-    <Compile Include="Npc\BaseNpc.cs" />
-    <Compile Include="Npc\UserRole.cs" />
-    <Compile Include="Passport.cs" />
-    <Compile Include="RequestData\NewRoleReq.cs" />
+    <Compile Include="ViewModels\BaseResponse.cs" />
+    <Compile Include="Data\Account\Login.cs" />
+    <Compile Include="Data\Npc\BaseNpc.cs" />
+    <Compile Include="Data\Npc\UserRole.cs" />
+    <Compile Include="Data\Account\Passport.cs" />
+    <Compile Include="RequestData\CreateRoleReq.cs" />
     <Compile Include="RequestData\ConnectingReq.cs" />
-    <Compile Include="Token.cs" />
+    <Compile Include="Data\Account\Token.cs" />
     <Compile Include="TxtReader.cs" />
+    <Compile Include="ViewModels\ItemTypeAndCount.cs" />
     <Compile Include="WsRequestMessage.cs" />
     <Compile Include="WsResponseMessage.cs" />
     <Compile Include="WsResult.cs" />
@@ -92,16 +142,22 @@
     <None Include="supersocket.cmd" />
     <None Include="supersocket.sh" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="ResponseData\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Content Include="DataConfig\Avatar.txt" />
     <Content Include="DataConfig\Character.txt" />
+    <Content Include="DataConfig\CompanyInfo.txt" />
+    <Content Include="DataConfig\Companyname.txt" />
+    <Content Include="DataConfig\DepartmentInfo.txt" />
     <Content Include="DataConfig\item.txt" />
     <Content Include="DataConfig\Level.txt" />
+    <Content Include="DataConfig\LocalString.txt" />
     <Content Include="DataConfig\Randomname.txt" />
     <Content Include="DataConfig\roomfurniture.txt" />
+    <Content Include="Data\Readme.txt" />
+    <Content Include="RequestData\Readme.txt" />
+    <Content Include="ResponseData\Readme.txt" />
+    <Content Include="ViewModels\ReadMe.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

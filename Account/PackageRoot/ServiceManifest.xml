@@ -29,7 +29,7 @@
       <!-- 通信侦听器使用此终结点来获取要侦听的端口。
            请注意，如果你的服务已分区，
            与位于代码中的各分区的副本共享此端口。-->
-      <Endpoint Protocol="http" Name="ServiceEndpoint" Type="Input" Port="9999" />
+      <Endpoint Protocol="http" Name="ServiceEndpoint" Type="Input" Port="5556" />
     </Endpoints>
   </Resources>
 </ServiceManifest>

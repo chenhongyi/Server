@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Fabric;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
@@ -9,35 +8,43 @@ using Microsoft.ServiceFabric.Services.Runtime;
 using Logging;
 using Shared;
 using Shared.Websockets;
+using LogicServer.Interface;
+using Model;
+using System.Linq;
+using Model.MsgQueue;
+using PublicGate.Hubs;
+using LogicServer.Data;
 using Microsoft.ServiceFabric.Services.Remoting;
 using Microsoft.ServiceFabric.Services.Remoting.Runtime;
+using PublicGate.Interface;
 
 namespace PublicGate
 {
     /// <summary>
     /// 通过 Service Fabric 运行时为每个服务实例创建此类的一个实例。
     /// </summary>
-    public sealed class PublicGate : StatelessService
+    public sealed class PublicGate : StatelessService, IPublicGate
     {
         private static readonly ILogger Logger = LoggerFactory.GetLogger(nameof(PublicGate));
+
+
         public PublicGate(StatelessServiceContext context)
             : base(context)
-        { }
-
-        public Task SendMsgToAllClients()
         {
-            throw new NotImplementedException();
+
+
         }
 
-        public Task SendMsgToClients()
+        public async Task SendOne(MsgQueueList msg)
         {
-            throw new NotImplementedException();
+            WebSocketApp.SendMsgToSignleClient(msg);
         }
 
-        public Task SendMsgToSignleClient()
+        public async Task SendAll(MsgQueueList msg)
         {
-            throw new NotImplementedException();
+            WebSocketApp.SendMsgToAllClients(msg);
         }
+
 
         /// <summary>
         /// 可选择性地替代以创建侦听器(如 TCP、HTTP)，从而使此服务副本可以处理客户端或用户请求。
@@ -46,8 +53,9 @@ namespace PublicGate
         protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners()
         {
             return new[] {
+                new ServiceInstanceListener (context=> this.CreateServiceRemotingListener(context)),
                 new ServiceInstanceListener(        //websocket
-                    initParams => new WebSocketListener(null, "WebSocket", initParams, () => new PublicGateWebSocketConnectionHandler()),
+                    initParams => new WebSocketListener("WSServiceEndpoint", "PublicGateService", initParams, () => new PublicGateWebSocketConnectionHandler()),
                     ServiceConst.ListenerWebsocket)
             };
         }
@@ -61,6 +69,15 @@ namespace PublicGate
             // TODO: 将以下示例代码替换为你自己的逻辑 
             //       或者在服务不需要此 RunAsync 重写时删除它。
             Logger.Debug(nameof(this.RunAsync));
+
+
+
+
+
+
+
+
+
 
             //TODO: actor
             //try

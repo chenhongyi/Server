@@ -28,7 +28,8 @@
       <!-- 通信侦听器使用此终结点来获取要侦听的端口。
            请注意，如果你的服务已分区，
            与位于代码中的各分区的副本共享此端口。-->
-      <Endpoint Name="ServiceEndpoint" Type="Input" Protocol="http" Port="8888" />
+      <Endpoint Name="ServiceEndpoint" />
+      <Endpoint Name="WSServiceEndpoint" Type="Input" Protocol="http" Port="5555" />
       <!--<Endpoint Name="WsServiceEndpoint" Type="Input" Protocol="http" Port ="8889"/>-->
     </Endpoints>
   </Resources>

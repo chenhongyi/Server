@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26403.7
+VisualStudioVersion = 15.0.26430.6
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "Server", "Server\Server.sfproj", "{074CDCD0-88C0-4016-A12E-6098FD76CECB}"
 EndProject
@@ -20,6 +20,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csproj", "{9306BE41-3C40-42CC-B764-56B725A0F82F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PublicGate", "PublicGate\PublicGate.csproj", "{E8314640-DF30-4659-9629-25E8FC9C8EBC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PublicGate.Interface", "PublicGate.Interface\PublicGate.Interface.csproj", "{2C0BDED3-AFC6-40CF-BB5F-7E2F4E51B5B9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -89,6 +91,14 @@ Global
 		{E8314640-DF30-4659-9629-25E8FC9C8EBC}.Release|Any CPU.ActiveCfg = Release|x64
 		{E8314640-DF30-4659-9629-25E8FC9C8EBC}.Release|x64.ActiveCfg = Release|x64
 		{E8314640-DF30-4659-9629-25E8FC9C8EBC}.Release|x64.Build.0 = Release|x64
+		{2C0BDED3-AFC6-40CF-BB5F-7E2F4E51B5B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C0BDED3-AFC6-40CF-BB5F-7E2F4E51B5B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C0BDED3-AFC6-40CF-BB5F-7E2F4E51B5B9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2C0BDED3-AFC6-40CF-BB5F-7E2F4E51B5B9}.Debug|x64.Build.0 = Debug|Any CPU
+		{2C0BDED3-AFC6-40CF-BB5F-7E2F4E51B5B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C0BDED3-AFC6-40CF-BB5F-7E2F4E51B5B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C0BDED3-AFC6-40CF-BB5F-7E2F4E51B5B9}.Release|x64.ActiveCfg = Release|Any CPU
+		{2C0BDED3-AFC6-40CF-BB5F-7E2F4E51B5B9}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

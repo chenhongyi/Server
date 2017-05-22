@@ -110,7 +110,6 @@ namespace Shared.Websockets
 
             try
             {
-                this.webSocketApp.Dispose();
                 if (this.mainLoop != null)
                 {
                     // allow a few seconds to complete the main loop

@@ -1,9 +1,10 @@
 ﻿using Microsoft.ServiceFabric.Services.Remoting;
 using Model;
-using System;
+using Model.MsgQueue;
+using Model.ViewModels;
+using SuperSocket.WebSocket;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LogicServer.Interface
@@ -14,6 +15,8 @@ namespace LogicServer.Interface
 
         Task<AccountResult> Passport(string imei);
         Task<AccountResult> Login(string pid, string pwd, string imei, string ip);
+
+        Task<byte[]> ProcessWsMessageAsync1(byte[] wsrequest, string session, CancellationToken cancellationToken);
 
         //TODO: 修改密码没做
         //Task<string> Password();

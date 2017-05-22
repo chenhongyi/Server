@@ -29,6 +29,7 @@ namespace Account
         {
             // Add framework services.
             services.AddMvc();
+            services.AddCors();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -36,8 +37,8 @@ namespace Account
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
-
             app.UseMvc();
+            app.UseCors(builder => builder.WithOrigins("http://127.0.0.1").AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
         }
     }
 }

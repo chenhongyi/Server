@@ -18,18 +18,20 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\..\..\..\..\DebugServer\Common\Shared\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\..\..\..\..\ReleaseServer\Common\Shared\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
@@ -111,9 +113,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BaseInstance.cs" />
     <Compile Include="IAsyncEnumerableExtensions.cs" />
     <Compile Include="ConfigurationHelper.cs" />
     <Compile Include="ConnectionFactory.cs" />
+    <Compile Include="InitHelpers.cs" />
     <Compile Include="Logging\LoggingConfiguration.cs" />
     <Compile Include="Logging\LoggingSource.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -123,8 +127,8 @@
     <Compile Include="Serializers\MD5Helper.cs" />
     <Compile Include="Serializers\ProtobufWsSerializer.cs" />
     <Compile Include="Serializers\SerializerFactory.cs" />
-    <Compile Include="ServiceConst.cs" />
     <Compile Include="Websockets\IWebSocketConnectionHandler.cs" />
+    <Compile Include="Websockets\SessionPool.cs" />
     <Compile Include="Websockets\WebSocketApp.cs" />
     <Compile Include="Websockets\WebSocketListener.cs" />
   </ItemGroup>
@@ -149,6 +153,10 @@
     <ProjectReference Include="..\Model\Model.csproj">
       <Project>{A1AD3A2A-6CBC-4BF3-A765-35F69A0936BF}</Project>
       <Name>Model</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\PublicGate.Interface\PublicGate.Interface.csproj">
+      <Project>{2C0BDED3-AFC6-40CF-BB5F-7E2F4E51B5B9}</Project>
+      <Name>PublicGate.Interface</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

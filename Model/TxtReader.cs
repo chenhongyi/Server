@@ -21,7 +21,8 @@ namespace Model
         {
             AutoData.Loader.Init((string file, Action<byte[]> load) =>
             {
-                load(Read(@"F:\ServiceFabric\Server\Model\DataConfig\" + file+".txt"));
+               // load(Read(@"F:\NewCode\server\Debug\Server\Model\DataConfig\" + file+".txt"));
+               load(Read(@"..\..\..\..\DataConfig\" + file + ".txt"));
             });
         }
     }

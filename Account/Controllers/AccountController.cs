@@ -1,18 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.ServiceFabric.Services.Remoting;
+﻿using Microsoft.AspNetCore.Mvc;
 using LogicServer.Interface;
-using Microsoft.ServiceFabric.Services.Remoting.Client;
 using Shared;
 using Model;
 using Microsoft.AspNetCore.Http;
 using Shared.Serializers;
+using Model.ViewModels;
+using Microsoft.AspNetCore.Cors;
 
 namespace Account.Controllers
 {
+
     [Route("[controller]/[action]")]
     public class AccountController : Controller
     {
@@ -23,6 +20,13 @@ namespace Account.Controllers
             _sign = "123456789";
             _account = ConnectionFactory.CreateAccountService();
         }
+
+        [HttpGet]
+        public string Test()
+        {
+            return "ok";
+        }
+
         [HttpGet]
         public BaseResponse Register(string pid, string pwd, string imei, int screenX, int screenY, string retailID, string sign, byte mobileType = 0)
         {
@@ -54,6 +58,7 @@ namespace Account.Controllers
 
             //逻辑处理
             var result = _account.Register(pid, pwd, imei, retailID, mobileType, ip).Result;
+            Response.Headers.Add("Access-Control-Allow-Origin", "*");
             if (result != null)
             {
                 switch (result.Status)
@@ -93,6 +98,7 @@ namespace Account.Controllers
                         };
                 }
             }
+
             return new BaseResponse()
             {
                 Handler = nameof(AccountController.Register),
@@ -105,9 +111,9 @@ namespace Account.Controllers
         #region 验证md5
         private bool CheckSign(HttpContext httpContext, string sign)
         {
-        #if DEBUG
-                    return true;
-        #endif
+#if DEBUG
+            return true;
+#endif
             //TODO 开发阶段 取消掉
             string param = httpContext.Request.QueryString.Value;
             var index = param.IndexOf("&sign");
@@ -146,6 +152,7 @@ namespace Account.Controllers
             #endregion
             //逻辑处理
             var result = _account.Passport(imei).Result;
+            Response.Headers.Add("Access-Control-Allow-Origin", "*");
             if (result != null)
             {
                 switch (result.Status)
@@ -233,6 +240,8 @@ namespace Account.Controllers
                 //逻辑处理
                 var ip = HttpContext.Connection.RemoteIpAddress.ToString();
                 var result = _account.Login(pid, pwd, imei, ip).Result;
+                Response.Headers.Add("Access-Control-Allow-Origin", "*");
+
                 if (result != null)
                 {
                     switch (result.Status)
@@ -286,16 +295,22 @@ namespace Account.Controllers
         [HttpGet]
         public void Password()
         {
+            Response.Headers.Add("Access-Control-Allow-Origin", "*");
+
         }
 
         [HttpGet]
         public void Notice()
         {
+            Response.Headers.Add("Access-Control-Allow-Origin", "*");
+
         }
 
         [HttpGet]
         public void Delete(int id)
         {
+            Response.Headers.Add("Access-Control-Allow-Origin", "*");
+
         }
     }
 }

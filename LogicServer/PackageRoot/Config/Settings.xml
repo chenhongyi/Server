@@ -5,6 +5,12 @@
     <Parameter Name="ReplicatorEndpoint" Value="ReplicatorEndpoint" />
     <Parameter Name="BatchAcknowledgementInterval" Value="0.05"/>
     <Parameter Name="CheckpointThresholdInMB" Value="512" />
+    <Parameter Name="MaxRecordSizeInKB" Value="1024" />
+    <Parameter Name="SharedLogSizeInMB" Value="4096"/>
+    <Parameter Name="WriteBufferMemoryPoolMinimumInKB" Value="8192" />
+    <Parameter Name="WriteBufferMemoryPoolMaximumInKB" Value="8192" />
+    <Parameter Name="SharedLogId" Value="{7668BB54-FE9C-48ed-81AC-FF89E60ED2EF}"  />
+    <Parameter Name="SharedLogPath" Value="D:\SharedLog.log"  />
   </Section>
   <!-- 这用于保护 StateManager 的复制流量。 -->
 

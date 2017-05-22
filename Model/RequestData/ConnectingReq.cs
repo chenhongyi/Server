@@ -1,16 +1,16 @@
 ﻿using ProtoBuf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace Model.RequestData
 {
+    /// <summary>
+    /// 客户端请求接入服务器
+    /// </summary>
+    /// 
     [ProtoContract]
     public class ConnectingReq
     {
-        [ProtoMember(1)]
-        public string Token { get; set; }
+        [ProtoMember(1)] public string Token { get; set; }
     }
 }
+

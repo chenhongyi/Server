@@ -1,4 +1,5 @@
 ﻿using Microsoft.ServiceFabric.Services.Remoting;
+using Model.MsgQueue;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,25 +8,11 @@ using System.Threading.Tasks;
 
 namespace PublicGate.Interface
 {
-    public interface IPublicGate : IService
+    public interface IPublicGate:IService
     {
+        Task SendOne(MsgQueueList msg);
 
-        /// <summary>
-        /// 发送给所有用户广播
-        /// </summary>
-        /// <returns></returns>
-        Task SendMsgToAllClients();
 
-        /// <summary>
-        /// 给部分用户广播
-        /// </summary>
-        /// <returns></returns>
-        Task SendMsgToClients();
-
-        /// <summary>
-        /// 发送给单一用户消息
-        /// </summary>
-        /// <returns></returns>
-        Task SendMsgToSignleClient();
+        Task SendAll(MsgQueueList msg);
     }
 }

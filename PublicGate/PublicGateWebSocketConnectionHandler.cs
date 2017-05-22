@@ -31,11 +31,25 @@ namespace PublicGate
                     this.clientFactory,
                     //ConnectionFactory.StockServiceUri,
                     ConnectionFactory.LogicServiceUri,
-                   // ConnectionFactory.MapServiceUri,
+                    // ConnectionFactory.MapServiceUri,
                     partitionKey: new ServicePartitionKey(mrequest.PartitionKey),    //选择服务器集群中的一个partition
                     listenerName: ServiceConst.ListenerWebsocket);
 
-            return await serviceClient.InvokeWithRetryAsync(async client => await client.SendReceiveAsync(wsrequest), cancellationToken);
+            return await serviceClient.InvokeWithRetryAsync(async client => await client.SendReceiveAsync(wsrequest),  cancellationToken);
+        }
+
+        public async Task ProcessWsMessageAsync(string sessionId, CancellationToken cancellationToken)
+        {
+            ServicePartitionClient<WsCommunicationClient> serviceClient =
+                new ServicePartitionClient<WsCommunicationClient>(
+                    this.clientFactory,
+                    //ConnectionFactory.StockServiceUri,
+                    ConnectionFactory.LogicServiceUri,
+                    // ConnectionFactory.MapServiceUri,
+                    partitionKey: new ServicePartitionKey(0),    //选择服务器集群中的一个partition
+                    listenerName: ServiceConst.ListenerWebsocket);
+
+            await serviceClient.InvokeWithRetryAsync(async client => await client.SendReceiveAsync(sessionId), cancellationToken);
         }
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Client;
 using Microsoft.ServiceFabric.Services.Client;
 using Microsoft.ServiceFabric.Services.Remoting.Client;
+using PublicGate.Interface;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,15 +14,10 @@ namespace Shared
 {
     public static class ConnectionFactory
     {
-        public static readonly string WebSocketServerName = @"ws://localhost:5555/WebSocket/";
-        public static readonly string PublicGateApi = "http://localhost:5555/Account/";
-        public static readonly string ReserveStockApiController = PublicGateApi + "reservestock";
-        public static readonly string StockApiController = PublicGateApi + "stockaggregator";
-        public static readonly string StockAggregatorApiController = PublicGateApi + "stock";
-        public static readonly Uri StockAggregatorServiceUri = new Uri("fabric:/Server/StockAggregatorService");
-        public static readonly Uri StockServiceUri = new Uri("fabric:/Server/StockService");
+
+
         public static readonly Uri LogicServiceUri = new Uri("fabric:/Server/LogicServer");
-        private static readonly string ApplicationName = "fabric:/Server";
+        public static readonly Uri PublicGateUri = new Uri("fabric:/Server/PublicGate");
 
 
 
@@ -30,7 +26,17 @@ namespace Shared
             return ServiceProxy.Create<ILogicServer>(LogicServiceUri, new ServicePartitionKey(0));
         }
 
-    
+
+        public static ILogicServer CreateLogicService()
+        {
+            return ServiceProxy.Create<ILogicServer>(LogicServiceUri, new ServicePartitionKey(0));
+        }
+
+        public static IPublicGate CreatePublicGateService()
+        {
+            return ServiceProxy.Create<IPublicGate>(PublicGateUri);
+        }
+
 
         //public static IStockService CreateStockService(int productId)
         //{
