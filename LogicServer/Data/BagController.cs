@@ -826,6 +826,7 @@ namespace LogicServer.Data
         {
             try
             {
+                
                 SellItemResult result = new SellItemResult();
                 var bgInfo = await DataHelper.GetRoleBagByRoleIdAsync(sm, roleId);
                 if (bgInfo == null)

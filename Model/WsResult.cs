@@ -116,6 +116,11 @@ namespace Model
         /// 不能创建过多部门
         /// </summary>
         MoreDepartment = 25,
+
+        /// <summary>
+        /// 需要大于0 的正整数
+        /// </summary>
+        PositiveInteger = 26,
         /// <summary>
         /// 未定义错误
         /// </summary>

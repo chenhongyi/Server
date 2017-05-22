@@ -228,6 +228,11 @@ namespace LogicServer
             }
             var id = data.ItemId;
             var count = data.Count;
+            if (count <= 0)
+            {
+                result.Result = WsResult.PositiveInteger;
+                return result;
+            }
             return await BagController.GetBagHandler().SellItemsAsync(_stateManager, role.Id, id, count);
         }
 
