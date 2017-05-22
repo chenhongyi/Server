@@ -18,25 +18,13 @@ using static AutoData.Item;
 using Shared.Websockets;
 using PublicGate.Interface;
 using Microsoft.ServiceFabric.Services.Remoting.Client;
+using Model.Data.Business;
 
 namespace LogicServer.Data
 {
-    public class BagController
+    public class BagController:BaseInstance<BagController>
     {
 
-        public static BagController _bagController;
-        public static BagController GetBagHandler()
-        {
-            if (_bagController != null)
-            {
-                return _bagController;
-            }
-            else
-            {
-                _bagController = new BagController();
-                return _bagController;
-            }
-        }
         /// <summary>
         /// 获取用户背包信息
         /// </summary>
@@ -71,7 +59,18 @@ namespace LogicServer.Data
                 foreach (var j in tmp.Attribute)    //增加属性
                 {
                     var attr = role.UserAttr.First(a => a.UserAttrID == j.AttributeID);
-                    attr.Count += j.Count;
+                    checked
+                    {
+                        try
+                        {
+                            attr.Count += j.Count;
+                        }
+                        catch (OverflowException ex)
+                        {
+                            throw new Exception(ex.Message);
+                        }
+                    }
+
                 }
             }
             foreach (var i in oldAvatar.Distinct())   //移除旧的属性
@@ -80,7 +79,17 @@ namespace LogicServer.Data
                 foreach (var item in tmp.Attribute)
                 {
                     var attr = role.UserAttr.First(a => a.UserAttrID == item.AttributeID);
-                    attr.Count -= item.Count;
+                    checked
+                    {
+                        try
+                        {
+                            attr.Count -= item.Count;
+                        }
+                        catch (OverflowException ex)
+                        {
+                            throw new Exception(ex.Message);
+                        }
+                    }
                 }
             }
             //检查背包剩余空间是否可以存放卸下来的时装
@@ -126,7 +135,7 @@ namespace LogicServer.Data
             result.BagInfo.MaxCellNumber = bgInfo.MaxCellNumber;
             foreach (var item in bgInfo.Items)
             {
-                result.BagInfo.Items.Add(new RoleItems()
+                result.BagInfo.Items.Add(new LoadRoleBagInfo()
                 {
                     CurCount = item.CurCount,
                     Id = item.Id,
@@ -245,13 +254,26 @@ namespace LogicServer.Data
                 var userMoney = bgInfo.Items.FirstOrDefault(p => p.Id == item.Id);
                 if (userMoney != null)
                 {
-                    userMoney.CurCount += money;    //更新值
+                    checked
+                    {
+                        try
+                        {
+                            userMoney.CurCount += money;    //更新值
+                        }
+                        catch (OverflowException ex)
+                        {
+                            throw new Exception(ex.Message);
+                        }
+                    }
                     await DataHelper.UpdateRoleBagByRoleIdAsync(sm, roleId, bgInfo, old);    //保存
+
+                   
+
                     result.CurUsedCell = bgInfo.CurUsedCell;
                     result.MaxCellNumber = bgInfo.MaxCellNumber;
                     foreach (var i in bgInfo.Items)
                     {
-                        result.Items.Add(new RoleItems()
+                        result.Items.Add(new LoadRoleBagInfo()
                         {
                             CurCount = i.CurCount,
                             Id = i.Id,
@@ -299,12 +321,20 @@ namespace LogicServer.Data
                         switch (item.Type)
                         {
                             case 1://普通物品 可以使用
-                                await UseGeneralItem(sm, roleId, itemId, count);
+                                result = await UseGeneralItem(sm, roleId, itemId, count);
                                 break;
                             case (int)GameEnum.Currency.Coin://金钱类物品
                             case (int)GameEnum.Currency.Gold://金钱类物品
                                                              //  case (int)GameEnum.Currency.Money://金钱类物品
                                 result.BagInfo = await GoldCtrl(sm, roleId, itemId, count);
+                                FinanceLogData loginfo = new FinanceLogData()
+                                {
+                                    Count = item.Sell.Count* count,
+                                    EventName = item.Name,
+                                    MoneyType = item.Sell.CurrencyID,
+                                    Type = FinanceLogType.SellItem
+                                };
+                                await FinanceLogController.Instance.UpdateFinanceLog(sm, roleId, loginfo);
                                 break;
                         }
                         return result;
@@ -330,13 +360,12 @@ namespace LogicServer.Data
         /// <returns></returns>
         private bool CheckItemType(int itemId)
         {
-            //itemId != 1 && itemId != 4 && itemId != 5 && itemId != 6 && itemId != 7) //1 普通可以使用 4  金钱类
             var item = GetItemById(itemId);
             if (item == null)
             {
                 return false;
             }
-            if (item.Type != 1 && item.Type != 4 && item.Type != 5 && item.Type != 6 && item.Type != 7)
+            if (item.Type != 1)
             {
                 return false;
             }
@@ -450,6 +479,7 @@ namespace LogicServer.Data
                         break;
                     case UseEffet.AddCurrency:  //增加金钱
                         await AddMoneyByUseItemAsync(sm, roleId, itemId, itemCount);
+
                         break;
                     case UseEffet.AddExp://增加经验值
                         exp = await AddExpByUseItemAsync(sm, roleId, itemCount);    //只要最终数据 所以不是+=
@@ -459,7 +489,7 @@ namespace LogicServer.Data
             var roleBag = await GetRoleBagItemInfoAsync(sm, roleId);
             foreach (var b in roleBag.Items)
             {
-                result.BagInfo.Items.Add(new RoleItems()
+                result.BagInfo.Items.Add(new LoadRoleBagInfo()
                 {
                     CurCount = b.CurCount,
                     Id = b.Id,
@@ -514,9 +544,9 @@ namespace LogicServer.Data
         /// <param name="moneyId"></param>
         /// <param name="moneyCount"></param>
         /// <returns></returns>
-        private async Task<RoleItems> AddMoneyByUseItemAsync(IReliableStateManager sm, Guid roleId, int moneyId, long moneyCount)
+        private async Task<LoadRoleBagInfo> AddMoneyByUseItemAsync(IReliableStateManager sm, Guid roleId, int moneyId, long moneyCount)
         {
-            RoleItems result = new RoleItems();
+            LoadRoleBagInfo result = new LoadRoleBagInfo();
             var roleBg = await GetRoleBagItemInfoAsync(sm, roleId);
             var oldbg = roleBg;
             if (roleBg == null) throw new NullReferenceException();
@@ -524,10 +554,27 @@ namespace LogicServer.Data
             var money = roleBg.Items.First(p => p.Id == moneyId);
             if (money != null)
             {
-                money.CurCount += moneyCount;
+                checked
+                {
+                    try
+                    {
+                        money.CurCount += moneyCount;
+                    }
+                    catch (OverflowException ex)
+                    {
+                        throw new Exception(ex.Message);
+                    }
+                }
             }
             await UpdateRoleBagItemInfoAsync(sm, roleId, roleBg, oldbg);   //保存
-
+            FinanceLogData loginfo = new FinanceLogData()
+            {
+                Count = moneyCount,
+                EventName = "",
+                MoneyType = moneyId,
+                Type = FinanceLogType.SellItem
+            };
+            await FinanceLogController.Instance.UpdateFinanceLog(sm, roleId, loginfo);
             result.CurCount = money.CurCount;
             result.OnSpace = 0;
             result.Id = money.Id;
@@ -558,7 +605,17 @@ namespace LogicServer.Data
                 var tmp = role.UserAttr.FirstOrDefault(p => p.UserAttrID == j.AttributeID);
                 if (tmp != null)
                 {
-                    tmp.Count += j.Count;
+                    checked
+                    {
+                        try
+                        {
+                            tmp.Count += j.Count;
+                        }
+                        catch (OverflowException ex)
+                        {
+                            throw new Exception(ex.Message);
+                        }
+                    }
                     attr = tmp;
                 }
             }
@@ -623,15 +680,25 @@ namespace LogicServer.Data
                 var item = GetItemById(i.Id);
                 if (item != null)
                 {
-                    if (item.Superposition == 0)  //身价值不叠加
+                    checked
                     {
-                        oldSocialStatus += item.Status;
-                    }
-                    else if (item.Superposition == 1)  //叠加
-                    {
-                        oldSocialStatus += (item.Status * i.CurCount);
-                    }
+                        try
+                        {
+                            if (item.Superposition == 0)  //身价值不叠加
+                            {
 
+                                oldSocialStatus += item.Status;
+                            }
+                            else if (item.Superposition == 1)  //叠加
+                            {
+                                oldSocialStatus += (item.Status * i.CurCount);
+                            }
+                        }
+                        catch (OverflowException ex)
+                        {
+                            throw new Exception(ex.Message);
+                        }
+                    }
                 }
             }
             long socialStatus = roleInfo.SocialStatus - oldSocialStatus;    //除去背包中所有物品带来的身价值
@@ -641,39 +708,52 @@ namespace LogicServer.Data
             {
                 var tmpItem = roleBg.Items.FirstOrDefault(p => p.Id == b.Key);
                 var itemTemplate = GetItemById(b.Key);
-                if (tmpItem != null)    //存在
+                checked
                 {
-                    curBagCell -= tmpItem.OnSpace;  //去除原先占用的格子
-                    if (itemTemplate.Count == 1)
+                    try
                     {
-                        tmpItem.Id = b.Key;
-                        tmpItem.OnSpace = tmpItem.CurCount += b.Value;  //当前数量和空间
+                        if (tmpItem != null)    //存在
+                        {
+
+                            curBagCell -= tmpItem.OnSpace;  //去除原先占用的格子
+                            if (itemTemplate.Count == 1)
+                            {
+                                tmpItem.Id = b.Key;
+
+                                tmpItem.OnSpace = tmpItem.CurCount += b.Value;  //当前数量和空间
+                            }
+                            else
+                            {
+                                tmpItem.Id = b.Key;
+                                tmpItem.CurCount += b.Value;    //当前数量
+                                tmpItem.OnSpace = (tmpItem.CurCount / itemTemplate.Count) + 1;
+                            }
+                            curBagCell += tmpItem.OnSpace;  //更新加入物品后的格子
+                        }
+                        else
+                        {
+                            Model.Data.General.Item i = new Model.Data.General.Item();
+                            if (itemTemplate.Count == 1)
+                            {
+                                i.Id = b.Key;
+                                i.OnSpace = i.CurCount = b.Value;   //当前数量和空间
+                            }
+                            else
+                            {
+                                i.Id = b.Key;
+                                i.CurCount += b.Value;
+                                i.OnSpace = (i.CurCount / itemTemplate.Count) + 1;
+                            }
+                            curBagCell += i.OnSpace;  //更新加入物品后的格子
+                            roleBg.Items.Add(i);
+                        }
                     }
-                    else
+                    catch (OverflowException ex)
                     {
-                        tmpItem.Id = b.Key;
-                        tmpItem.CurCount += b.Value;    //当前数量
-                        tmpItem.OnSpace = (tmpItem.CurCount / itemTemplate.Count) + 1;
+                        throw new Exception(ex.Message);
                     }
-                    curBagCell += tmpItem.OnSpace;  //更新加入物品后的格子
                 }
-                else
-                {
-                    Model.Data.General.Item i = new Model.Data.General.Item();
-                    if (itemTemplate.Count == 1)
-                    {
-                        i.Id = b.Key;
-                        i.OnSpace = i.CurCount = b.Value;   //当前数量和空间
-                    }
-                    else
-                    {
-                        i.Id = b.Key;
-                        i.CurCount += b.Value;
-                        i.OnSpace = (i.CurCount / itemTemplate.Count) + 1;
-                    }
-                    curBagCell += i.OnSpace;  //更新加入物品后的格子
-                    roleBg.Items.Add(i);
-                }
+
             }
             roleBg.CurUsedCell = curBagCell;
 
@@ -684,13 +764,23 @@ namespace LogicServer.Data
                 var item = GetItemById(status.Id);
                 if (item != null)
                 {
-                    if (item.Superposition == 0)
+                    checked
                     {
-                        socialStatus += item.Status;
-                    }
-                    else
-                    {
-                        socialStatus += (item.Status * status.CurCount);
+                        try
+                        {
+                            if (item.Superposition == 0)
+                            {
+                                socialStatus += item.Status;
+                            }
+                            else
+                            {
+                                socialStatus += (item.Status * status.CurCount);
+                            }
+                        }
+                        catch (OverflowException ex)
+                        {
+                            throw new Exception(ex.Message);
+                        }
                     }
                 }
             }
@@ -703,7 +793,7 @@ namespace LogicServer.Data
             result.BagInfo.CurUsedCell = roleBg.CurUsedCell;
             foreach (var i in roleBg.Items)
             {
-                result.BagInfo.Items.Add(new RoleItems()
+                result.BagInfo.Items.Add(new LoadRoleBagInfo()
                 {
                     OnSpace = i.OnSpace,
                     CurCount = i.CurCount,
@@ -788,7 +878,17 @@ namespace LogicServer.Data
             {
                 ItemTypeAndCount typeCount = new ItemTypeAndCount();
                 typeCount.ItemType = UseEffet.GetItem;
-                typeCount.Count = effet.Value2 * count;
+                checked
+                {
+                    try
+                    {
+                        typeCount.Count = effet.Value2 * count;
+                    }
+                    catch (OverflowException ex)
+                    {
+                        throw new Exception(ex.Message);
+                    }
+                }
                 dic.Add(effet.Value1, typeCount);
             }
             return dic;
@@ -826,7 +926,6 @@ namespace LogicServer.Data
         {
             try
             {
-                
                 SellItemResult result = new SellItemResult();
                 var bgInfo = await DataHelper.GetRoleBagByRoleIdAsync(sm, roleId);
                 if (bgInfo == null)
@@ -839,13 +938,35 @@ namespace LogicServer.Data
 
                 var money = item.Sell;
 
-
-
                 if (!await RemoveItemsAsync(sm, roleId, itemId, count)) { result.Result = WsResult.RemoveItemErr; return result; }
+
+                long financeMoney = 0;
                 var curMoney = bgInfo.Items.FirstOrDefault(p => p.Id == money.CurrencyID);
-                curMoney.CurCount += (money.Count * count);
+                checked
+                {
+                    try
+                    {
+                        financeMoney += (money.Count * count);
+                        curMoney.CurCount += (money.Count * count);
+                    }
+                    catch (OverflowException ex)
+                    {
+                        throw new Exception(ex.Message);
+                    }
+                }
 
                 await DataHelper.UpdateRoleBagByRoleIdAsync(sm, roleId, bgInfo, old);     //保存数值
+                                                                                          //金钱变动消息
+                                                                                          // await MsgSender.Instance.GoldUpdate(sm, roleId, curMoney.CurCount, (Currency)money.CurrencyID);
+
+                FinanceLogData loginfo = new FinanceLogData()
+                {
+                    Count = financeMoney,
+                    EventName = item.Name,
+                    MoneyType = money.CurrencyID,
+                    Type = FinanceLogType.SellItem
+                };
+                await FinanceLogController.Instance.UpdateFinanceLog(sm, roleId, loginfo);
 
                 var retBg = await DataHelper.GetRoleBagByRoleIdAsync(sm, roleId);
                 var retRoInfo = await DataHelper.GetRoleInfoByRoleIdAsync(sm, roleId);
@@ -853,7 +974,7 @@ namespace LogicServer.Data
                 result.BagInfo.MaxCellNumber = retBg.MaxCellNumber;
                 foreach (var i in retBg.Items)
                 {
-                    result.BagInfo.Items.Add(new RoleItems()
+                    result.BagInfo.Items.Add(new LoadRoleBagInfo()
                     {
                         CurCount = i.CurCount,
                         Id = i.Id,
@@ -939,6 +1060,10 @@ namespace LogicServer.Data
                             }
                             await DataHelper.UpdateRoleBagByRoleIdAsync(sm, roleId, bgInfo, old); //更新背包信息
                             await DataHelper.UpdateRoleInfoByRoleIdAsync(sm, roleId, roleInfo, oldRoleInfo);
+
+                            //道具变动消息
+                            await MsgSender.Instance.ItemUpdate(sm, roleId, itemId, i.CurCount);
+                            //身价变动消息
                             return true;
                         }
                     }

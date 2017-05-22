@@ -76,6 +76,7 @@
     <Compile Include="Data\Business\Company.cs" />
     <Compile Include="Data\Business\Department.cs" />
     <Compile Include="Data\Business\Employee.cs" />
+    <Compile Include="Data\Business\FinanceLogData.cs" />
     <Compile Include="Data\General\Item.cs" />
     <Compile Include="Data\Npc\UserAttr.cs" />
     <Compile Include="Data\Npc\IdRole.cs" />
@@ -90,7 +91,6 @@
     <Compile Include="RequestData\JoinGameReq.cs" />
     <Compile Include="RequestData\RemoveItemReq.cs" />
     <Compile Include="RequestData\SellItemReq.cs" />
-    <Compile Include="RequestData\TestReq.cs" />
     <Compile Include="RequestData\UseItemReq.cs" />
     <Compile Include="ResponseData\AddItemResult.cs" />
     <Compile Include="ResponseData\ChangeAvatarResult.cs" />
@@ -101,13 +101,15 @@
     <Compile Include="ResponseData\DeleteRoleResult.cs" />
     <Compile Include="ResponseData\DepartmentUpdateResult.cs" />
     <Compile Include="ResponseData\father\ItemBase.cs" />
+    <Compile Include="ResponseData\LoadFinanceLogResult.cs" />
+    <Compile Include="ResponseData\GoldChangedResult.cs" />
     <Compile Include="ResponseData\JoinGameResult.cs" />
     <Compile Include="ResponseData\RemoveItemResult.cs" />
     <Compile Include="ResponseData\SellItemResult.cs" />
+    <Compile Include="ResponseData\TCFinanceLogChangedResult.cs" />
     <Compile Include="ResponseData\TCLevelUpResult.cs" />
     <Compile Include="ResponseData\TCRoleBagChangeResult.cs" />
     <Compile Include="ResponseData\TCRoleInfoChangeResult.cs" />
-    <Compile Include="ResponseData\TestResult.cs" />
     <Compile Include="ResponseData\UpdateAvatarResult.cs" />
     <Compile Include="ResponseData\UpdateShenjiaResult.cs" />
     <Compile Include="ResponseData\UseItemResult.cs" />

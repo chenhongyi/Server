@@ -68,25 +68,17 @@ namespace Model.Data.Business
         /// </summary>
         [DataMember] public int Level { get; set; }
         /// <summary>
-        /// 当前营收  当前经验值
+        /// 当前营收 
         /// </summary>
         [DataMember] public long CurExp { get; set; }
         /// <summary>
-        /// 当前人事部等级
+        /// 昨日收入
         /// </summary>
-        //[DataMember] public int CurPersonnelLv { get; set; }
-        ///// <summary>
-        /////当前财务部等级
-        ///// </summary>
-        //[DataMember] public int CurFinanceLv { get; set; }
-        ///// <summary>
-        ///// 当前市场部等级
-        ///// </summary>
-        //[DataMember] public int CurMarketLv { get; set; }
-        ///// <summary>
-        ///// 当前投资部等级
-        ///// </summary>
-        //[DataMember] public int CurInvestmentLv { get; set; }
+        [DataMember] public long YesterdayIncome { get; set; }
+        /// <summary>
+        /// 公司身价    地皮和店铺加在一起
+        /// </summary>
+        [DataMember] public long SocialStatus { get; set; }
         /// <summary>
         /// 创建时间
         /// </summary>

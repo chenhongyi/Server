@@ -98,6 +98,7 @@ namespace Model.ResponseData
         [ProtoMember(31)] public long Exp { get; set; }
         [ProtoMember(32)] public LoadCompanyInfo CompanyInfo { get; set; } = new LoadCompanyInfo();
         [ProtoMember(33)] public LoadDepartMentInfo DepartInfoInfo { get; set; } = new LoadDepartMentInfo();
+        [ProtoMember(34)] public List<LoadFinanceLogInfo> FinanceLogInfo { get; set; } = new List<LoadFinanceLogInfo>();
     }
 
     [ProtoContract]
@@ -164,10 +165,10 @@ namespace Model.ResponseData
         /// </summary>
         [ProtoMember(2)] public long CurUsedCell { get; set; }
 
-        [ProtoMember(3)] public List<RoleItems> Items { get; set; } = new List<RoleItems>();
+        [ProtoMember(3)] public List<LoadRoleBagInfo> Items { get; set; } = new List<LoadRoleBagInfo>();
     }
     [ProtoContract]
-    public class RoleItems
+    public class LoadRoleBagInfo
     {
         /// <summary>
         /// 编号
@@ -250,5 +251,15 @@ namespace Model.ResponseData
         [ProtoMember(2)] public int CurDirectorCounts { get; set; }
         [ProtoMember(3)] public int CurStaff { get; set; }
         [ProtoMember(12)] public int MakerCoinCounts { get; set; }
+    }
+
+    [ProtoContract]
+    public class LoadFinanceLogInfo
+    {
+        [ProtoMember(1)] public string Time { get; set; }
+        [ProtoMember(2)] public string EventName { get; set; }
+        [ProtoMember(3)] public int Type { get; set; }
+        [ProtoMember(4)] public int MoneyType { get; set; }
+        [ProtoMember(5)] public long Count { get; set; }
     }
 }

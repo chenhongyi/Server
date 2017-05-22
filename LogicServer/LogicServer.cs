@@ -201,7 +201,7 @@ namespace LogicServer
                 return result;
             }
             var id = data.Id;
-            return await BagController.GetBagHandler().ChangeAvatar(_stateManager, role, id, result);
+            return await BagController.Instance.ChangeAvatar(_stateManager, role, id, result);
         }
 
         /// <summary>
@@ -233,7 +233,8 @@ namespace LogicServer
                 result.Result = WsResult.PositiveInteger;
                 return result;
             }
-            return await BagController.GetBagHandler().SellItemsAsync(_stateManager, role.Id, id, count);
+
+            return await BagController.Instance.SellItemsAsync(_stateManager, role.Id, id, count);
         }
 
         /// <summary>
@@ -262,7 +263,7 @@ namespace LogicServer
                 }
                 var id = data.ItemId;
                 var count = data.Count;
-                return await BagController.GetBagHandler().AddItemToRoleBag(_stateManager, role.Id, id, count);
+                return await BagController.Instance.AddItemToRoleBag(_stateManager, role.Id, id, count);
             }
             catch (Exception ex)
             {
@@ -296,7 +297,7 @@ namespace LogicServer
             }
             var id = data.ItemId;
             var count = data.Count;
-            return await BagController.GetBagHandler().UseItemsAsync(_stateManager, role.Id, id, count);
+            return await BagController.Instance.UseItemsAsync(_stateManager, role.Id, id, count);
         }
 
 
@@ -483,6 +484,7 @@ namespace LogicServer
                 var BagInfo = await DataHelper.GetRoleBagByRoleIdAsync(_stateManager, user.Id);
                 result.CompanyInfo = await CompanyController.Instance.GetCompanyInfoByRoleId(_stateManager, user.Id);
                 result.DepartInfoInfo = await CompanyController.Instance.GetDepartmentInfoByRoleId(_stateManager, user.Id);
+                result.FinanceLogInfo = await FinanceLogController.Instance.GetFinanceLog(_stateManager, user.Id);
                 if (BagInfo != null)
                 {
                     // BagInfo = await DataHelper.ResetUserBagByRoleIdAsync(_stateManager, user.Id);
@@ -524,14 +526,14 @@ namespace LogicServer
         /// </summary>
         /// <param name="items"></param>
         /// <returns></returns>
-        private static List<RoleItems> GetRoleItems(List<Model.Data.General.Item> items)
+        private static List<LoadRoleBagInfo> GetRoleItems(List<Model.Data.General.Item> items)
         {
-            var result = new List<RoleItems>();
+            var result = new List<LoadRoleBagInfo>();
             if (items.Any())
             {
                 foreach (var item in items)
                 {
-                    result.Add(new RoleItems()
+                    result.Add(new LoadRoleBagInfo()
                     {
                         Id = item.Id,
                         CurCount = item.CurCount,

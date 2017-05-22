@@ -25,6 +25,9 @@ namespace LogicServer.Data
 
         #region 数据表名定义
         private const string AccountsCollectionName = "accounts";
+
+
+
         private const string TokenCollectionName = "tokens";
         private const string PassportCollectionName = "passports";
         private const string LoginCollectionName = "logins";
@@ -56,7 +59,16 @@ namespace LogicServer.Data
         private const string RoleIdBindCompanyName = "roleIdBindCompany";
         private const string CompanyNameBindCompanyIdName = "companyNameBindCompanyId"; //公司名字绑定公司id    用于检查重名
         private const string RoleIdBindDepartmentName = "roleIdBindDepartment";
+        private const string RoleIdBindFinanceLogName = "roleIdBindFinanceLog";
 
+        /// <summary>
+        /// key = roleid, value = List<FinanceLogData>
+        /// </summary>
+        private static IReliableDictionary<Guid, List<FinanceLogData>> roleIdBindFinanceLogList = null;
+
+        /// <summary>
+        /// 角色名绑定公司各部门  key = roleid, value = departmentgroup
+        /// </summary>
         private static IReliableDictionary<Guid, DepartmentGroup> roleIdBindDepartment = null;
 
         /// <summary>
@@ -145,7 +157,106 @@ namespace LogicServer.Data
 
         #endregion
 
+        internal static async Task<List<FinanceLogData>> GetFinanceLogByRoleIdAsync(IReliableStateManager sm, Guid roleId)
+        {
+            roleIdBindFinanceLogList = await sm.GetOrAddAsync<IReliableDictionary<Guid, List<FinanceLogData>>>(RoleIdBindFinanceLogName);
+            try
+            {
+                using (var tx = sm.CreateTransaction())
+                {
+                    var result = await roleIdBindFinanceLogList.TryGetValueAsync(tx, roleId);
+                    return result.HasValue ? result.Value : null;
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
 
+
+        internal static async Task UpdateFinanceLogByRoleIdAsync(IReliableStateManager sm, Guid roleId, List<FinanceLogData> log)
+        {
+            roleIdBindFinanceLogList = await sm.GetOrAddAsync<IReliableDictionary<Guid, List<FinanceLogData>>>(RoleIdBindFinanceLogName);
+            try
+            {
+                var oldLog = await GetFinanceLogByRoleIdAsync(sm, roleId);
+                if (oldLog == null)
+                {
+                    List<FinanceLogData> logList = new List<FinanceLogData>();
+                    logList.AddRange(log);
+                    await BindFinanceLogByRoleIdAsync(sm, roleId, logList);
+                }
+                else
+                {
+                    var newLog = oldLog.Where(p => p.Time.Date >= DateTime.Now.AddDays(-7)).ToList();
+                    var cmpLog = newLog;
+                    newLog.AddRange(log);
+                    using (var tx = sm.CreateTransaction())
+                    {
+                        await roleIdBindFinanceLogList.TryUpdateAsync(tx, roleId, newLog, cmpLog);
+                        await tx.CommitAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+        internal static async Task UpdateFinanceLogByRoleIdAsync(IReliableStateManager sm, Guid roleId, FinanceLogData log)
+        {
+            roleIdBindFinanceLogList = await sm.GetOrAddAsync<IReliableDictionary<Guid, List<FinanceLogData>>>(RoleIdBindFinanceLogName);
+            try
+            {
+                var oldLog = await GetFinanceLogByRoleIdAsync(sm, roleId);
+                if (oldLog == null)
+                {
+                    List<FinanceLogData> logList = new List<FinanceLogData>();
+                    logList.Add(log);
+                    await BindFinanceLogByRoleIdAsync(sm, roleId, logList);
+                }
+                else
+                {
+                    var newLog = oldLog.Where(p => p.Time.Date >= DateTime.Now.AddDays(-7)).ToList();
+                    var cmpLog = newLog;
+                    newLog.Add(log);
+                    using (var tx = sm.CreateTransaction())
+                    {
+                        await roleIdBindFinanceLogList.TryUpdateAsync(tx, roleId, newLog, cmpLog);
+                        await tx.CommitAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+
+
+        internal static async Task BindFinanceLogByRoleIdAsync(IReliableStateManager sm, Guid roleId, List<FinanceLogData> list)
+        {
+            roleIdBindFinanceLogList = await sm.GetOrAddAsync<IReliableDictionary<Guid, List<FinanceLogData>>>(RoleIdBindFinanceLogName);
+            try
+            {
+                using (var tx = sm.CreateTransaction())
+                {
+                    await roleIdBindFinanceLogList.AddAsync(tx, roleId, list);
+                    await tx.CommitAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
 
         internal static async Task DepartmentLvUp(IReliableStateManager sm, Guid id, DepartmentGroup depart, int departid)
         {
@@ -197,12 +308,27 @@ namespace LogicServer.Data
                     money.CurCount -= costGold;
                 }
                 UpdateRoleBagByRoleIdAsync(sm, roleId, bg, cmpbg).Wait();
+                await UpdateGoldMsg(sm, roleId, money.CurCount, currency);
+
             }
             catch (Exception ex)
             {
                 //TODO 日志
                 throw ex;
             }
+        }
+
+        internal static async Task UpdateGoldMsg(IReliableStateManager sm, Guid roleId, long count, Currency type)
+        {
+            GoldChangedResult result = new GoldChangedResult()
+            {
+                Count = count,
+                GoldType = (int)type
+            };
+
+            var data = await InitHelpers.GetPse().SerializeAsync(result);
+            MsgQueueList msg = new MsgQueueList();
+            await MsgMaker.SendMessage(WSResponseMsgID.GoldChangedResult, 1, roleId, sm, data);
         }
 
         /// <summary>
@@ -401,7 +527,7 @@ namespace LogicServer.Data
                 }
                 result.DepartmentInfo = await CreateDepartment(sm, role.Id);    //创建部门并初始化
 
-                result.CompanyInfo.Id = company.Id.ToString() ;
+                result.CompanyInfo.Id = company.Id.ToString();
                 result.CompanyInfo.Level = company.Level;
                 result.CompanyInfo.Name = company.Name;
                 result.CompanyInfo.CurExp = company.CurExp;

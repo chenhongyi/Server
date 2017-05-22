@@ -59,8 +59,8 @@ namespace LogicServer.Controllers
                     departId += depart.Investment.Level + 1 + 10000;
                     break;
             }
-            var level = await DepartmentLvUp(sm, role.Id, departId, type);
-            if (level == null)
+            result = await DepartmentLvUp(sm, role.Id, departId, type);
+            if (result == null)
             {
                 result.Result = WsResult.DepartmentLvUpFailed;
                 return result;
@@ -241,7 +241,7 @@ namespace LogicServer.Controllers
             //公司信息
             var company = await DataHelper.GetCompanyInfoByRoleId(sm, role.Id);
             var bg = await DataHelper.GetRoleBagByRoleIdAsync(sm, role.Id);
-            var cmpConfig = CompanyInfo.GetForId(company.Level);
+            var cmpConfig = CompanyInfo.GetForId(company.Level + 1);
             var department = await DataHelper.GetDepartmentInfoByRoleId(sm, role.Id);
             if (company == null || department == null)
             {

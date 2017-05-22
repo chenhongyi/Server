@@ -107,7 +107,9 @@
     <Compile Include="Controllers\CompanyController.cs" />
     <Compile Include="Data\DataHelper.cs" />
     <Compile Include="Data\BagController.cs" />
+    <Compile Include="Data\FinanceLogController.cs" />
     <Compile Include="Data\MsgMaker.cs" />
+    <Compile Include="Data\MsgSender.cs" />
     <Compile Include="Data\UserAttrController.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="LogicServer.cs" />

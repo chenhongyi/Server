@@ -33,6 +33,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Account\Account.csproj" />
     <ProjectReference Include="..\LogicServer\LogicServer.csproj" />
+    <ProjectReference Include="..\LogServer\LogServer.csproj" />
     <ProjectReference Include="..\PublicGate\PublicGate.csproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
