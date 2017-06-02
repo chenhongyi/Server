@@ -30,6 +30,10 @@ using SuperSocket.WebSocket;
 using PublicGate.Interface;
 using LogicServer.Controllers;
 using Model.Data.Business;
+using Microsoft.ServiceFabric.Data.Collections;
+using Model.Protocol;
+using LogicServer.Data.Helper;
+using System.Runtime.Remoting.Messaging;
 
 namespace LogicServer
 {
@@ -38,6 +42,7 @@ namespace LogicServer
     /// </summary>
     internal sealed class LogicServer : StatefulService, ILogicServer, IWebSocketConnectionHandler
     {
+        public static LogicServer Instance;
 
         private static IReliableStateManager _stateManager;
         private static readonly ILogger Logger = LoggerFactory.GetLogger(nameof(LogicServer));
@@ -48,13 +53,52 @@ namespace LogicServer
         public LogicServer(StatefulServiceContext context)
             : base(context)
         {
+            Instance = this;
+
             TxtReader.Init();
             _stateManager = this.StateManager;
             _stateManager.TransactionChanged += this.OnTransactionChangedHadler;
             _stateManager.StateManagerChanged += this.OnStateManagerChangeHandler;
         }
 
+        #region 当前唯一线程内角色
+        public class CurrUser
+        {
+            public Account account = new Account();
+            public UserRole role = new UserRole();
+            public string sessionId;
+            public byte[] bytes;
+            public Bag bag = new Bag();
+            //  public static CurrUser Empty = new CurrUser();
+        }
 
+        #endregion
+
+
+        private static void SetRole(string sessionId, Account account, UserRole role, byte[] data, Bag bag)
+        {
+            var user = User;
+            user.role = role;
+            user.account = account;
+            user.sessionId = sessionId;
+            user.bytes = data;
+            user.bag = bag;
+        }
+
+        const string UserString = "user";
+        public static CurrUser User
+        {
+            get
+            {
+                CurrUser _User = (CurrUser)CallContext.LogicalGetData(UserString);
+                if (_User == null)
+                {
+                    _User = new CurrUser();
+                    CallContext.LogicalSetData(UserString, _User);
+                }
+                return _User;
+            }
+        }
 
         /// <summary>
         /// 可靠状态管理器事件
@@ -63,8 +107,41 @@ namespace LogicServer
         /// <param name="e"></param>
         private void OnStateManagerChangeHandler(object sender, NotifyStateManagerChangedEventArgs e)
         {
-            // throw new NotImplementedException();
+            if (e.Action == NotifyStateManagerChangedAction.Rebuild)
+            {
+                // this.ProcessStataManagerRebuildNotification(e);
+
+                return;
+            }
+
+            //   this.ProcessStateManagerSingleEntityNotification(e);
         }
+        // private void ProcessStateManagerSingleEntityNotification(NotifyStateManagerChangedEventArgs e)
+        // {
+        //     var operation = e as NotifyStateManagerSingleEntityChangedEventArgs;
+
+        //     if (operation.Action == NotifyStateManagerChangedAction.Add)
+        //     {
+        //         if (operation.ReliableState is IReliableDictionary<TKey, TValue>)
+        //         {
+        //             var dictionary = (IReliableDictionary<TKey, TValue>)operation.ReliableState;
+        //             dictionary.RebuildNotificationAsyncCallback = this.OnDictionaryRebuildNotificationHandlerAsync;
+        //             dictionary.DictionaryChanged += this.OnDictionaryChangedHandler;
+        //         }
+        //     }
+        // }
+        // public async Task OnDictionaryRebuildNotificationHandlerAsync(
+        //IReliableDictionary<TKey, TValue> origin,
+        //NotifyDictionaryRebuildEventArgs<TKey, TValue> rebuildNotification)
+        // {
+        //     this.secondaryIndex.Clear();
+
+        //     var enumerator = e.State.GetAsyncEnumerator();
+        //     while (await enumerator.MoveNextAsync(CancellationToken.None))
+        //     {
+        //         this.secondaryIndex.Add(enumerator.Current.Key, enumerator.Current.Value);
+        //     }
+        // }
 
 
         /// <summary>
@@ -81,7 +158,7 @@ namespace LogicServer
 
                 //TODO 发生改变时 进行通知
 
-                //this.lastCommittedTransactionList.Add(e.Transaction.TransactionId);
+                // this.lastCommittedTransactionList.Add(e.Transaction.TransactionId);
             }
         }
 
@@ -107,23 +184,31 @@ namespace LogicServer
         class RequestMsg
         {
             public WSResponseMsgID send;
-            public Func<Account, UserRole, string, byte[], Task<BaseResponseData>> handle;
-            public bool isAccount;//是否需要登录
-            public bool isRole;//是否需要用户
+            public Func<Task<BaseResponseData>> handle;
+            public bool ndAccount = true;//是否需要登录
+            public bool ndRole = true;//是否需要用户
+            public bool ndBag = true;
         }
         Dictionary<WSRequestMsgID, RequestMsg> dicRequest = new Dictionary<WSRequestMsgID, RequestMsg>()
         {
-            { WSRequestMsgID.ConnectingReq, new RequestMsg(){ send = WSResponseMsgID.ConnectingResult, handle =  Connecting, isAccount = false, isRole = false }},//连接
-            { WSRequestMsgID.CreateRoleReq, new RequestMsg(){ send = WSResponseMsgID.CreateRoleResult, handle =  CreateNewRole, isAccount = true, isRole = false }}, //创建角色
-            { WSRequestMsgID.JoinGameReq, new RequestMsg(){ send = WSResponseMsgID.JoinGameResult,     handle =  JoinGame, isAccount = false, isRole = false }},//进入游戏
-            { WSRequestMsgID.UseItemReq,new RequestMsg(){ send = WSResponseMsgID.UseItemResult,handle = UseItem,isAccount = false ,isRole = true } },//使用物品
-             { WSRequestMsgID.SellItemReq,new RequestMsg(){ send = WSResponseMsgID.SellItemResult,handle = SellItem,isAccount =false,isRole = true } },  //出售道具
-            {WSRequestMsgID.ChangeAvatarReq,new RequestMsg(){ send = WSResponseMsgID.ChangeAvatarResult,handle = ChangeAvater,isAccount =false,isRole=true} },  //换装
-            { WSRequestMsgID.CreateCompanyReq,new RequestMsg(){ send = WSResponseMsgID.CreateCompanyResult,handle=CreateCompany,isAccount=false,isRole=true} }, //创建公司
-            {WSRequestMsgID.CompanyLvUpReq,new RequestMsg(){ send = WSResponseMsgID.CompanyLvUpResult,handle=CompanyLvUp,isAccount=false,isRole=true} },//公司升级
-            { WSRequestMsgID.DepartmentUpdateReq,new RequestMsg(){ send = WSResponseMsgID.DepartmentUpdateResult,handle = DepartmentLvUp,isAccount=false,isRole=true} },
+            { WSRequestMsgID.ConnectingReq, new RequestMsg(){ send = WSResponseMsgID.ConnectingResult, handle =  Connecting, ndAccount = false, ndRole = false,ndBag=false }},//连接
+            { WSRequestMsgID.CreateRoleReq, new RequestMsg(){ send = WSResponseMsgID.CreateRoleResult, handle =  CreateNewRole, ndAccount = true, ndRole = false,ndBag=false }}, //创建角色
+            { WSRequestMsgID.JoinGameReq, new RequestMsg(){ send = WSResponseMsgID.JoinGameResult,     handle =  JoinGame,ndRole=false, ndAccount = false,ndBag=false }},//进入游戏
+            { WSRequestMsgID.UseItemReq,new RequestMsg(){ send = WSResponseMsgID.UseItemResult,handle = UseItem,ndAccount = false  } },//使用物品
+             { WSRequestMsgID.SellItemReq,new RequestMsg(){ send = WSResponseMsgID.SellItemResult,handle = SellItem,ndAccount =false } },  //出售道具
+            {WSRequestMsgID.ChangeAvatarReq,new RequestMsg(){ send = WSResponseMsgID.ChangeAvatarResult,handle = ChangeAvater,ndAccount =false} },  //换装
+            { WSRequestMsgID.CreateCompanyReq,new RequestMsg(){ send = WSResponseMsgID.CreateCompanyResult,handle=CreateCompany,ndAccount=false} }, //创建公司
+            {WSRequestMsgID.CompanyLvUpReq,new RequestMsg(){ send = WSResponseMsgID.CompanyLvUpResult,handle=CompanyLvUp,ndAccount=false} },//公司升级
+            { WSRequestMsgID.DepartmentUpdateReq,new RequestMsg(){ send = WSResponseMsgID.DepartmentUpdateResult,handle = DepartmentLvUp,ndAccount=false} },    //升级部门
+            { WSRequestMsgID.GetMapReq,new RequestMsg(){ send = WSResponseMsgID.GetMapResult,handle=GetMapCell,ndAccount = false,ndRole=false,ndBag=false} },   //请求地图信息
+            { WSRequestMsgID.BuyLandReq,new RequestMsg(){ send = WSResponseMsgID.BuyLandResult,handle  = BuyLand,ndAccount =false} },  //购买土地
+            { WSRequestMsgID.CreateBuildReq,new RequestMsg(){ send = WSResponseMsgID.CreateBuildResult, handle = CreateBuild,ndAccount = false} },//创建店铺
+            { WSRequestMsgID.DestoryBuildReq,new RequestMsg(){ send = WSResponseMsgID.DestoryBuildResult,handle = DestoryBuild,ndAccount = false} },//摧毁店铺
+
+            { WSRequestMsgID.RoomReq, new RequestMsg(){ send = WSResponseMsgID.RoomResult, handle = RoomController.Instance.GetRoom } },
+
             #if DEBUG   
-            { WSRequestMsgID.AddItemReq,new RequestMsg(){send=WSResponseMsgID.AddItemResult,handle=AddItem,isAccount=false,isRole=true } }, //添加道具
+            { WSRequestMsgID.AddItemReq,new RequestMsg(){send=WSResponseMsgID.AddItemResult,handle=AddItem,ndAccount=false} }, //添加道具
             //{ },
 #endif
             
@@ -132,48 +217,159 @@ namespace LogicServer
             //{ WSRequestMsgID.DeleteRoleReq, new RequestMsg(){ send = WSResponseMsgID.DeleteRoleResult, handle =  , isAccount = false, isRole = true }}, //删除角色
         };
 
-        private static async Task<BaseResponseData> DepartmentLvUp(Account account, UserRole role, string sid, byte[] bytes)
+        private static async Task<BaseResponseData> DestoryBuild()
         {
-            DepartmentUpdateResult result = new DepartmentUpdateResult();
-            if (bytes == null)
+            DestoryBuildResult result = new DestoryBuildResult();
+            if (User.bytes == null)
             {
-                result.Result = WsResult.ParamsError;
+                result.Result = GameEnum.WsResult.ParamsError;
                 return result;
             }
-            var data = await InitHelpers.GetPse().DeserializeAsync<DepartmentUpdateReq>(bytes);
+            var data = await InitHelpers.GetPse().DeserializeAsync<DestoryBuildReq>(User.bytes);
             if (data == null)
             {
-                result.Result = WsResult.ParamsError;
+                result.Result = GameEnum.WsResult.ParamsError;
                 return result;
             }
-            var type = (DepartMentType)data.Type;
-            return await CompanyController.Instance.DepartmentLvUp(_stateManager, role, result, type);
+            return await BuildController.Instance.DestoryBuild(data.Id, result);
         }
 
-        private static async Task<BaseResponseData> CompanyLvUp(Account account, UserRole role, string sid, byte[] bytes)
+        private static async Task<BaseResponseData> CreateBuild()
+        {
+            CreateBuildResult result = new CreateBuildResult();
+            if (User.bytes == null)
+            {
+                result.Result = GameEnum.WsResult.ParamsError;
+                return result;
+            }
+            var data = await InitHelpers.GetPse().DeserializeAsync<CreateBuildReq>(User.bytes);
+            if (data == null)
+            {
+                result.Result = GameEnum.WsResult.ParamsError;
+                return result;
+            }
+
+
+
+            //检查钱够不够
+            var config = AutoData.Building.GetForId(data.ShopType);
+            long needMoney = config.BuildingCost.Count;
+            var moneyType = config.BuildingCost.GoldType;
+            if (needMoney <= 0)
+            {
+                result.Result = GameEnum.WsResult.ParamsError;
+                return result;
+            }
+            if (!(BagController.Instance.CheckMoney(needMoney, moneyType)))
+            {
+                result.Result = GameEnum.WsResult.NotEnoughMoney;
+                return result;
+            }
+
+            return await BuildController.Instance.CreateBuild(data, result);
+        }
+
+        private static async Task<BaseResponseData> BuyLand()
+        {
+            BuyLandResult result = new BuyLandResult();
+            if (User.bytes == null)
+            {
+                result.Result = GameEnum.WsResult.ParamsError;
+                return result;
+            }
+            var data = await InitHelpers.GetPse().DeserializeAsync<BuyLandReq>(User.bytes);
+            if (data == null)
+            {
+                result.Result = GameEnum.WsResult.ParamsError;
+                return result;
+            }
+            var landConfig = LandInfo.GetForLevel(data.Level);
+            long needMoney = landConfig.Price.Count;
+            var moneyType = landConfig.Price.CurrencyID;
+            if (needMoney <= 0)
+            {
+                result.Result = GameEnum.WsResult.ParamsError;
+                return result;
+            }
+            if (!(BagController.Instance.CheckMoney(needMoney, moneyType)))
+            {
+                result.Result = GameEnum.WsResult.NotEnoughMoney;
+                return result;
+            }
+            return await LandController.Instance.BuyLand(data.Pos, result);
+        }
+
+
+
+
+
+        /// <summary>
+        /// 请求地图信息
+        /// </summary>
+        /// <param name="account"></param>
+        /// <param name="role"></param>
+        /// <param name="sid"></param>
+        /// <param name="bytes">坐标数组</param>
+        /// <returns></returns>
+        private static async Task<BaseResponseData> GetMapCell()
+        {
+            GetMapResult result = new GetMapResult();
+            if (User.bytes == null)
+            {
+                result.Result = GameEnum.WsResult.ParamsError;
+                return result;
+            }
+            var data = await InitHelpers.GetPse().DeserializeAsync<GetMapReq>(User.bytes);
+            if (data == null)
+            {
+                result.Result = GameEnum.WsResult.ParamsError;
+                return result;
+            }
+            return await LandController.Instance.GetLandCell(data.Pos, result);
+        }
+
+        private static async Task<BaseResponseData> DepartmentLvUp()
+        {
+            DepartmentUpdateResult result = new DepartmentUpdateResult();
+            if (User.bytes == null)
+            {
+                result.Result = GameEnum.WsResult.ParamsError;
+                return result;
+            }
+            var data = await InitHelpers.GetPse().DeserializeAsync<DepartmentUpdateReq>(User.bytes);
+            if (data == null)
+            {
+                result.Result = GameEnum.WsResult.ParamsError;
+                return result;
+            }
+            var type = (GameEnum.DepartMentType)data.Type;
+            return await DepartmentController.Instance.DepartmentLvUp(result, type);
+        }
+
+        private static async Task<BaseResponseData> CompanyLvUp()
         {
             CompanyLvUpResult result = new CompanyLvUpResult();
 
-            return await CompanyController.Instance.CompanyLvUp(_stateManager, role, result);
+            return await CompanyController.Instance.CompanyLvUp(result);
         }
 
-        private static async Task<BaseResponseData> CreateCompany(Account account, UserRole role, string sid, byte[] bytes)
+        private static async Task<BaseResponseData> CreateCompany()
         {
             CreateCompanyResult result = new CreateCompanyResult();
-            if (bytes == null)
+            if (User.bytes == null)
             {
-                result.Result = WsResult.ParamsError;
+                result.Result = GameEnum.WsResult.ParamsError;
                 return result;
             }
-            var data = await InitHelpers.GetPse().DeserializeAsync<CreateCompanyReq>(bytes);
+            var data = await InitHelpers.GetPse().DeserializeAsync<CreateCompanyReq>(User.bytes);
             if (data == null)
             {
-                result.Result = WsResult.ParamsError;
+                result.Result = GameEnum.WsResult.ParamsError;
                 return result;
             }
             var name = data.Name;
-
-            return await CompanyController.Instance.CreateCompany(_stateManager, role, name, result);
+            var role = LogicServer.User.role;
+            return await CompanyController.Instance.CreateCompany(role.Id, name, result);
 
         }
 
@@ -186,22 +382,22 @@ namespace LogicServer
         /// <param name="sid"></param>
         /// <param name="bytes">时装id数组</param>
         /// <returns></returns>
-        private static async Task<BaseResponseData> ChangeAvater(Account account, UserRole role, string sid, byte[] bytes)
+        private static async Task<BaseResponseData> ChangeAvater()
         {
             ChangeAvatarResult result = new ChangeAvatarResult();
-            if (bytes == null)
+            if (User.bytes == null)
             {
-                result.Result = WsResult.ParamsError;
+                result.Result = GameEnum.WsResult.ParamsError;
                 return result;
             }
-            var data = await InitHelpers.GetPse().DeserializeAsync<ChangeAvatarReq>(bytes);
+            var data = await InitHelpers.GetPse().DeserializeAsync<ChangeAvatarReq>(User.bytes);
             if (data == null)
             {
-                result.Result = WsResult.ParamsError;
+                result.Result = GameEnum.WsResult.ParamsError;
                 return result;
             }
             var id = data.Id;
-            return await BagController.Instance.ChangeAvatar(_stateManager, role, id, result);
+            return await BagController.Instance.ChangeAvatar(id, result);
         }
 
         /// <summary>
@@ -212,29 +408,29 @@ namespace LogicServer
         /// <param name="sid"></param>
         /// <param name="bytes"></param>
         /// <returns></returns>
-        private static async Task<BaseResponseData> SellItem(Account account, UserRole role, string sid, byte[] bytes)
+        private static async Task<BaseResponseData> SellItem()
         {
             SellItemResult result = new SellItemResult();
-            if (bytes == null)
+            if (User.bytes == null)
             {
-                result.Result = WsResult.ParamsError;
+                result.Result = GameEnum.WsResult.ParamsError;
                 return result;
             }
-            var data = await InitHelpers.GetPse().DeserializeAsync<SellItemReq>(bytes);
+            var data = await InitHelpers.GetPse().DeserializeAsync<SellItemReq>(User.bytes);
             if (data == null)
             {
-                result.Result = WsResult.ParamsError;
+                result.Result = GameEnum.WsResult.ParamsError;
                 return result;
             }
             var id = data.ItemId;
             var count = data.Count;
             if (count <= 0)
             {
-                result.Result = WsResult.PositiveInteger;
+                result.Result = GameEnum.WsResult.PositiveInteger;
                 return result;
             }
 
-            return await BagController.Instance.SellItemsAsync(_stateManager, role.Id, id, count);
+            return await BagController.Instance.SellItemsAsync(id, count);
         }
 
         /// <summary>
@@ -245,25 +441,25 @@ namespace LogicServer
         /// <param name="sid"></param>
         /// <param name="bytes"></param>
         /// <returns></returns>
-        private static async Task<BaseResponseData> AddItem(Account account, UserRole role, string sid, byte[] bytes)
+        private static async Task<BaseResponseData> AddItem()
         {
             try
             {
                 AddItemResult result = new AddItemResult();
-                if (bytes == null)
+                if (User.bytes == null)
                 {
-                    result.Result = WsResult.ParamsError;
+                    result.Result = GameEnum.WsResult.ParamsError;
                     return result;
                 }
-                var data = await InitHelpers.GetPse().DeserializeAsync<AddItemReq>(bytes);
+                var data = await InitHelpers.GetPse().DeserializeAsync<AddItemReq>(User.bytes);
                 if (data == null)
                 {
-                    result.Result = WsResult.ParamsError;
+                    result.Result = GameEnum.WsResult.ParamsError;
                     return result;
                 }
                 var id = data.ItemId;
                 var count = data.Count;
-                return await BagController.Instance.AddItemToRoleBag(_stateManager, role.Id, id, count);
+                return await BagController.Instance.AddItemToRoleBag(id, count);
             }
             catch (Exception ex)
             {
@@ -281,23 +477,23 @@ namespace LogicServer
         /// <param name="sid"></param>
         /// <param name="bytes"></param>
         /// <returns></returns>
-        private static async Task<BaseResponseData> UseItem(Account account, UserRole role, string sid, byte[] bytes)
+        private static async Task<BaseResponseData> UseItem()
         {
             UseItemResult result = new UseItemResult();
-            if (bytes == null)
+            if (User.bytes == null)
             {
-                result.Result = WsResult.ParamsError;
+                result.Result = GameEnum.WsResult.ParamsError;
                 return result;
             }
-            var data = await InitHelpers.GetPse().DeserializeAsync<UseItemReq>(bytes);
+            var data = await InitHelpers.GetPse().DeserializeAsync<UseItemReq>(User.bytes);
             if (data == null)
             {
-                result.Result = WsResult.ParamsError;
+                result.Result = GameEnum.WsResult.ParamsError;
                 return result;
             }
             var id = data.ItemId;
             var count = data.Count;
-            return await BagController.Instance.UseItemsAsync(_stateManager, role.Id, id, count);
+            return await BagController.Instance.UseItemsAsync(_stateManager, User.role.Id, id, count);
         }
 
 
@@ -310,17 +506,11 @@ namespace LogicServer
         /// <returns></returns>
         public async Task ProcessWsMessageAsync(string sessionId, CancellationToken cancellationToken)
         {
-            var role = await DataHelper.GetOnlineRoleBySessionAsync(this.StateManager, sessionId);
-            await LevelUp(role);
+
         }
-        private static async Task LevelUp(UserRole role)
-        {
-            await DataHelper.RoleLevelUpAsync(_stateManager, role.Id);
-        }
-        /// <summary>
-        /// IWebSocketListener.ProcessWsMessageAsync 二进制消息分发过来进行处理
-        /// </summary>
-        public async Task<byte[]> ProcessWsMessageAsync(byte[] wsrequest, string sessionId, CancellationToken cancellationToken)
+
+
+        public async Task<byte[]> ProcessWsMessageAsync(byte[] wsrequest, string session, CancellationToken cancellationToken)
         {
             Logger.Debug(nameof(this.ProcessWsMessageAsync));
             WsRequestMessage mrequest = await InitHelpers.GetMse().DeserializeAsync<WsRequestMessage>(wsrequest);
@@ -330,73 +520,37 @@ namespace LogicServer
             {
                 Account account = null;
                 UserRole role = null;
+                Bag bag = null;
                 var info = dicRequest[(WSRequestMsgID)mrequest.MsgId];
-                if (info.isAccount) //账号required
+                if (info.ndAccount)
                 {
-                    account = await DataHelper.GetAccountBySessionAsync(this.StateManager, sessionId);
+                    account = await GetAccount(session);
+
+
+                    //   account = await DataHelper.GetAccountBySessionAsync(this.StateManager, session);
                     if (account == null)
                     {
                         mresponse.Result = (int)WsResult.NotAccount;
                         return await InitHelpers.GetMse().SerializeAsync(mresponse);
                     }
                 }
-                if (info.isRole)    //角色required
+                if (info.ndRole)
                 {
-                    role = await DataHelper.GetOnlineRoleBySessionAsync(this.StateManager, sessionId);
+                    role = await RoleDataHelper.Instance.GetRoleBySidAsync(session);
+                    //role = await DataHelper.GetOnlineRoleBySessionAsync(this.StateManager, session);
                     if (role == null)
                     {
                         mresponse.Result = (int)WsResult.NotRole;
                         return await InitHelpers.GetMse().SerializeAsync(mresponse);
                     }
+                    bag = await BagDataHelper.Instance.GetBagByRoleId(role.Id);
+                    if (bag == null)
+                        bag = new Bag();
                 }
-                if (mresponse.Result == (int)WsResult.Success)  //成功返回值
+                if (mresponse.Result == (int)WsResult.Success)
                 {
-                    var ret = await info.handle(account, role, sessionId, mrequest.Data);
-                    mresponse.Result = (int)ret.Result;
-                    mresponse.MsgId = (int)info.send;
-                    mresponse.Value = await InitHelpers.GetMse().SerializeAsync(ret);
-                }
-            }
-            else
-            {
-                mresponse.Result = (int)WsResult.NoneActionFunc;
-            }
-            return await InitHelpers.GetMse().SerializeAsync(mresponse);
-        }
-
-
-        public async Task<byte[]> ProcessWsMessageAsync1(byte[] wsrequest, string session, CancellationToken cancellationToken)
-        {
-            Logger.Debug(nameof(this.ProcessWsMessageAsync));
-            WsRequestMessage mrequest = await InitHelpers.GetMse().DeserializeAsync<WsRequestMessage>(wsrequest);
-            WsResponseMessage mresponse = new WsResponseMessage();
-            mresponse.Result = (int)WsResult.Success;
-            if (dicRequest.ContainsKey((WSRequestMsgID)mrequest.MsgId))
-            {
-                Account account = null;
-                UserRole role = null;
-                var info = dicRequest[(WSRequestMsgID)mrequest.MsgId];
-                if (info.isAccount) //账号required
-                {
-                    account = await DataHelper.GetAccountBySessionAsync(this.StateManager, session);
-                    if (account == null)
-                    {
-                        mresponse.Result = (int)WsResult.NotAccount;
-                        return await InitHelpers.GetMse().SerializeAsync(mresponse);
-                    }
-                }
-                if (info.isRole)    //角色required
-                {
-                    role = await DataHelper.GetOnlineRoleBySessionAsync(this.StateManager, session);
-                    if (role == null)
-                    {
-                        mresponse.Result = (int)WsResult.NotRole;
-                        return await InitHelpers.GetMse().SerializeAsync(mresponse);
-                    }
-                }
-                if (mresponse.Result == (int)WsResult.Success)  //成功返回值
-                {
-                    var ret = await info.handle(account, role, session, mrequest.Data);
+                    SetRole(session, account, role, mrequest.Data, bag);
+                    var ret = await info.handle();
                     mresponse.Result = (int)ret.Result;
                     mresponse.MsgId = (int)info.send;
                     mresponse.Value = await InitHelpers.GetMse().SerializeAsync(ret);
@@ -408,6 +562,12 @@ namespace LogicServer
             }
             return await InitHelpers.GetMse().SerializeAsync(mresponse);
 
+        }
+
+        private async Task<Account> GetAccount(string session)
+        {
+            var pid = await SidUidDataHelper.Instance.GetUserNameBySidAsync(session);
+            return await AccountDataHelper.Instance.GetAccountByUserNameAsync(pid);
         }
 
         /// <summary>
@@ -417,35 +577,35 @@ namespace LogicServer
         /// <param name="sessionId"></param>
         /// <param name="roleId"></param>
         /// <returns></returns>
-        private static async Task<BaseResponseData> JoinGame(Account account, UserRole role, string sessionId, byte[] bytes)
+        private static async Task<BaseResponseData> JoinGame()
         {
             var result = new JoinGameResult();
             var data = new JoinGameReq();
-            if (bytes != null)
+            string sessionId = User.sessionId;
+            if (User.bytes != null)
             {
-                data = await InitHelpers.GetPse().DeserializeAsync<JoinGameReq>(bytes); if (data == null)
+                data = await InitHelpers.GetPse().DeserializeAsync<JoinGameReq>(User.bytes);
+                if (data == null)
                 {
                     //请求参数为空
-                    result.Result = WsResult.RoleIdIsNull;
+                    result.Result = GameEnum.WsResult.RoleIdIsNull;
                     return result;
                 }
             }
             else
             {
                 //请求参数为空
-                result.Result = WsResult.RoleIdIsNull;
+                result.Result = GameEnum.WsResult.RoleIdIsNull;
                 return result;
             }
-
-
             var roleId = new Guid(data.RoleId);
-            var user = await DataHelper.GetRoleInfoByRoleIdAsync(_stateManager, roleId);
+            var user = await RoleDataHelper.Instance.GetRoleByRoleIdAsync(roleId);
+
             if (user != null) //找到角色数据 绑定在线状态  返回数据给用户  设置状态为登录状态
             {
                 //查找session用来绑定
                 //查找用户是否在线
-                //var online = await DataHelper.FindOnlinePlayerByRoleIdAsync(_stateManager, user.Id);
-                var sid = await DataHelper.GetOnlineSessionByRoleIdAsync(_stateManager, roleId);    //查找当前连接是否有角色
+                var sid = await SidRoleIdDataHelper.Instance.GetSidByRoleIdAsync(roleId);    //查找当前连接是否有角色
                 if (sid != null) //有旧的session
                 {
                     if (sid.Equals(sessionId))   //检查session保存的roleid是不是和新登入的一致
@@ -455,20 +615,20 @@ namespace LogicServer
                     else
                     {
                         //不一致  可能是从别的地方连接
-                        await DataHelper.RemoveOnlineRoleBySessionAsync(_stateManager, sid);                //移除旧的
-                        await DataHelper.RemoveOnlineRoleBySessionAsync(_stateManager, sessionId);
-                        await DataHelper.BindOnlineRoleBySessionAsync(_stateManager, sessionId, user);      //绑定新的新session绑定
+                        await RoleDataHelper.Instance.RemoveRoleBySidAsync(sid);
+                        await RoleDataHelper.Instance.RemoveRoleBySidAsync(sessionId);
+                        await RoleDataHelper.Instance.SetRoleBySidAsync(sessionId, user);
                     }
                     //用户已经在线  进行通知处理  匹配 imei处理 预防盗号处理
                     //TODO
-                    await DataHelper.UpdateOnlineSessionByRoleIdAsync(_stateManager, roleId, sessionId, sid);    //用新账号绑定新的session
+                    await SidRoleIdDataHelper.Instance.UpdateSidByRoleIdAsync(roleId, sessionId);
                 }
                 else
                 {   //没有旧的session
-                    await DataHelper.RemoveOnlineRoleBySessionAsync(_stateManager, sessionId);  //尝试移除
-                    await DataHelper.BindOnlineRoleBySessionAsync(_stateManager, sessionId, user);  //添加角色进入在线表 session匹配
+                    await RoleDataHelper.Instance.RemoveRoleBySidAsync(sessionId);
+                    await RoleDataHelper.Instance.SetRoleBySidAsync(sessionId, user);
                     //切记 下线时候要删除  或者在心跳包收不到的情况下     也要删除
-                    await DataHelper.BindOnlineSessionByRoleIdAsync(_stateManager, roleId, sessionId);
+                    await SidRoleIdDataHelper.Instance.SetSidByRoleIdAsync(roleId, sessionId);
                 }
                 //构造返回值
                 List<Model.ResponseData.UserAttr> u = new List<Model.ResponseData.UserAttr>();
@@ -481,69 +641,58 @@ namespace LogicServer
                     });
                 }
                 //Load Bag info
-                var BagInfo = await DataHelper.GetRoleBagByRoleIdAsync(_stateManager, user.Id);
-                result.CompanyInfo = await CompanyController.Instance.GetCompanyInfoByRoleId(_stateManager, user.Id);
-                result.DepartInfoInfo = await CompanyController.Instance.GetDepartmentInfoByRoleId(_stateManager, user.Id);
-                result.FinanceLogInfo = await FinanceLogController.Instance.GetFinanceLog(_stateManager, user.Id);
-                if (BagInfo != null)
+                var bagInfo = await BagDataHelper.Instance.GetBagByRoleId(roleId);
+                result.CompanyInfo = await CompanyController.Instance.GetCompanyInfoByRoleId(roleId);
+                result.DepartInfoInfo = await DepartmentController.Instance.GetDepartmentInfoByRoleId(roleId);
+                result.FinanceLogInfo = await FinanceLogController.Instance.GetFinanceLog(roleId);
+                result.MapInfo = await LandController.Instance.GetRoleLandShopInfo(roleId);
+                result.Room = await RoomController.Instance.GetRoom(user.Id) as RoomResult;
+                result.UserAttr = u;
+                result.Affinity = user.Affinity;
+                result.Avatar = user.Avatar;
+                result.Certificates = user.Certificates;
+                result.CertificatesExp = user.CertificatesExp;
+                result.Charm = user.Charm;
+                result.Concentration = user.Concentration;
+                result.Constitution = user.Constitution;
+                result.Desc = user.Desc;
+                result.Gold = user.Gold;
+                result.Exp = user.Exp;
+                result.Icon = user.Icon;
+                result.RoleId = user.Id.ToString();
+                result.Intelligence = user.Intelligence;
+                result.Level = user.Level;
+                result.Name = user.Name;
+                result.Sex = user.Sex;
+                result.SocialStatus = user.SocialStatus;
+                result.Type = user.Type;
+                result.VipLevel = user.VipLevel;
+                if (bagInfo != null)
                 {
-                    // BagInfo = await DataHelper.ResetUserBagByRoleIdAsync(_stateManager, user.Id);
-
-                    result.UserAttr = u;
-                    result.Affinity = user.Affinity;
-                    result.Avatar = user.Avatar;
-                    result.Certificates = user.Certificates;
-                    result.CertificatesExp = user.CertificatesExp;
-                    result.Charm = user.Charm;
-                    result.Concentration = user.Concentration;
-                    result.Constitution = user.Constitution;
-                    result.Desc = user.Desc;
-                    result.Gold = user.Gold;
-                    result.Exp = user.Exp;
-                    result.Icon = user.Icon;
-                    result.RoleId = user.Id.ToString();
-                    result.Intelligence = user.Intelligence;
-                    result.Level = user.Level;
-                    result.Name = user.Name;
-                    result.Sex = user.Sex;
-                    result.SocialStatus = user.SocialStatus;
-                    result.Type = user.Type;
-                    result.VipLevel = user.VipLevel;
                     result.RoleBag = new BagInfo()
                     {
-                        CurUsedCell = BagInfo.CurUsedCell,
-                        MaxCellNumber = BagInfo.MaxCellNumber,
-                        Items = GetRoleItems(BagInfo.Items)
+                        CurUsedCell = bagInfo.CurUsedCell,
+                        MaxCellNumber = bagInfo.MaxCellNumber,
+                        Items = BagController.Instance.GetRoleItems(bagInfo.Items)
                     };
                 }
-            }
-            return result;
-        }
-
-
-        /// <summary>
-        /// 构造背包数据
-        /// </summary>
-        /// <param name="items"></param>
-        /// <returns></returns>
-        private static List<LoadRoleBagInfo> GetRoleItems(List<Model.Data.General.Item> items)
-        {
-            var result = new List<LoadRoleBagInfo>();
-            if (items.Any())
-            {
-                foreach (var item in items)
+                else
                 {
-                    result.Add(new LoadRoleBagInfo()
+                    bagInfo = new Bag();
+                    result.RoleBag = new BagInfo()
                     {
-                        Id = item.Id,
-                        CurCount = item.CurCount,
-                        OnSpace = item.OnSpace,
-                    });
-                    //#endif
+                        CurUsedCell = bagInfo.CurUsedCell,
+                        MaxCellNumber = bagInfo.MaxCellNumber,
+                        Items = BagController.Instance.GetRoleItems(bagInfo.Items)
+                    };
                 }
+
             }
             return result;
         }
+
+
+
 
         /// <summary>
         /// 创建新角色
@@ -552,53 +701,52 @@ namespace LogicServer
         /// <param name="name"></param>
         /// <param name="sex"></param>
         /// <returns></returns>
-        private static async Task<BaseResponseData> CreateNewRole(Account account, UserRole role, string session, byte[] bytes)//string sessionId, string name, int sex)
+        private static async Task<BaseResponseData> CreateNewRole()//string sessionId, string name, int sex)
         {
             CreateRoleResult result = new CreateRoleResult();
-            var data = await InitHelpers.GetPse().DeserializeAsync<CreateRoleReq>(bytes);
+            var account = User.account;
+            var sessionId = User.sessionId;
+            if (User.bytes == null)
+            {
+                result.Result = GameEnum.WsResult.ParamsError;
+                return result;
+            }
+            var data = await InitHelpers.GetPse().DeserializeAsync<CreateRoleReq>(User.bytes);
             var name = data.Name;
             var sex = data.Sex;
             if (string.IsNullOrEmpty(name))
             {
-                result.Result = WsResult.ParamsError;
+                result.Result = GameEnum.WsResult.ParamsError;
                 return result;
             }
-            var allRoles = await DataHelper.GetRoleListsByAccountIdAsync(_stateManager, account.AccountID);
-            //检查是否有角色
+            var allRoles = await RoleListDataHelper.Instance.GetRoleListByAccountIdAsync(account.AccountID);
             if (allRoles != null)
             {
-                //检查可以创建的角色 暂定允许创建10个角色
                 if (account.RoleNumber >= 10)
                 {
                     result.ErrorDesc = "角色数量过多，请删除部分角色再创建";
                     return result;
                 }
                 //检查是否重名
-                if (await DataHelper.CheckRoleNameIsExistsByNameAsync(_stateManager, name))
+                if (await IdRoleDataHelper.Instance.CheckIdRoleByRoleNameAsync(name))
                 {
                     result.ErrorDesc = "角色名重复";
                     return result;  //重名直接返回
                 }
                 //构造新角色
                 UserRole user = new UserRole(sex, name, account.AccountID);
+                IdRole idRole = new IdRole(user.Name, user.Id);
 
-                IdRole idRole = new IdRole(user.Name, user.Id);//构造角色名和id绑定表
+                await IdRoleDataHelper.Instance.SetIdRoleByRoleNameAsync(name, idRole);
+                await RoleDataHelper.Instance.SetRoleByRoleIdAsync(user.Id, user);
 
-                await DataHelper.SetRoleNameBindRoleIdAsync(_stateManager, name, idRole); //保存id和角色绑定列表
-                await DataHelper.BindRoleInfoByRoleIdAsync(_stateManager, user.Id, user);  //保存角色表 
-
-                //await DataHelper.InitRoleInfo(_stateManager, user.Id);  //初始化角色属性
 
                 List<UserRole> roles = new List<UserRole>();
-                roles.AddRange(allRoles);           //把原来的角色取出来 
-                roles.Add(user);                //加入一个新角色  
-                                                //更新数据
-                                                //如果是增加角色 最后一个参数为true
-                await DataHelper.UpdateRoleListsByAccountId(_stateManager, account.AccountID, roles, true);
+                roles.AddRange(allRoles);
+                roles.Add(user);
+                await RoleListDataHelper.Instance.UpdateRoleListByAccountIdAsync(account.AccountID, roles);
+                await RoleDataHelper.Instance.UpdateRoleBySidAsync(sessionId, user);
 
-                //保存新角色
-
-                //一切正常的返回值
                 result.ErrorDesc = "";
                 result.Name = name;
                 result.Sex = sex;
@@ -608,31 +756,24 @@ namespace LogicServer
             {
                 ///没有角色，新增一个
                 //检查重名
-                if (await DataHelper.CheckRoleNameIsExistsByNameAsync(_stateManager, name))
+                if (await IdRoleDataHelper.Instance.CheckIdRoleByRoleNameAsync(name))
                 {
                     result.ErrorDesc = "角色名重复";
-                    return result;  //重名直接返回
+                    return result;
                 }
-                //判断男女
-                var character = GetDefaultCharacter(sex);
                 //构造新角色
                 UserRole user = new UserRole(sex, name, account.AccountID);
-                IdRole idRole = new IdRole(user.Name, user.Id);//构造角色名和id绑定表
+                IdRole idRole = new IdRole(user.Name, user.Id);
 
 
-                await DataHelper.SetRoleNameBindRoleIdAsync(_stateManager, name, idRole); //保存id和角色绑定列表
-                await DataHelper.BindRoleInfoByRoleIdAsync(_stateManager, user.Id, user);  //保存角色表 
+                await IdRoleDataHelper.Instance.SetIdRoleByRoleNameAsync(name, idRole);
+                await RoleDataHelper.Instance.SetRoleByRoleIdAsync(user.Id, user);
 
-                //await DataHelper.InitRoleInfo(_stateManager, user.Id);
-                //TODO //初始化角色属性
                 List<UserRole> roles = new List<UserRole>();
                 roles.Add(user);
 
-                await DataHelper.AddNewRoleListsByAccountIdAsync(_stateManager, account.AccountID, roles);  //保存角色表 
-
-                //保存新角色
-
-                //一切正常的返回值
+                await RoleListDataHelper.Instance.SetRoleListByAccountIdAsync(user.AccountId, roles);
+                await RoleDataHelper.Instance.SetRoleBySidAsync(sessionId, user);
                 result.ErrorDesc = "";
                 result.Name = name;
                 result.Sex = sex;
@@ -650,35 +791,36 @@ namespace LogicServer
         /// <param name="data"></param>
         /// <param name="sessionId"></param>
         /// <returns></returns>
-        private static async Task<BaseResponseData> Connecting(Account account, UserRole role, string sessionId, byte[] bytes)//ConnectingReq data, string sessionId)
+        private static async Task<BaseResponseData> Connecting()//ConnectingReq data, string sessionId)
         {
+
             ConnectingResult result = new ConnectingResult();
-            var data = await InitHelpers.GetPse().DeserializeAsync<ConnectingReq>(bytes);
+            var data = await InitHelpers.GetPse().DeserializeAsync<ConnectingReq>(User.bytes);
+            string sessionId = User.sessionId;
             var signToken = data.Token;
             if (signToken == null)
             {
-                result.Result = WsResult.ParamsError;
+                result.Result = GameEnum.WsResult.ParamsError;
                 return result;
             }
             result.RoleLists = new List<RoleLists>();
-            var token = await DataHelper.GetTokenBySignTokenAsync(_stateManager, signToken);    //取得token
+            var token = await TokenDataHelper.Instance.GetTokenBySignToken(signToken);
             if (token != null)
             {
                 //判断token时效
                 if (token.ExpireTime >= DateTime.Now)
                 {
-                    var account1 = await DataHelper.GetAccountByUserNameAsync(_stateManager, token.UserPassport);
-                    //token有效 并且账号存在 尝试获取session是否存在  用来判断是否已经绑定session
+                    var account1 = await AccountDataHelper.Instance.GetAccountByUserNameAsync(token.UserPassport);
 
 
-                    var sid = await DataHelper.GetSessionByUserNameAsync(_stateManager, token.UserPassport);
-                    var act = await DataHelper.GetUserNameBySessionAsync(_stateManager, sessionId);
+                    var sid = await SidUidDataHelper.Instance.GetSidByUserNameAsync(token.UserPassport);
+                    var act = await SidUidDataHelper.Instance.GetUserNameBySidAsync(sessionId);
 
 
                     //检查 账号和上次保存的账号是否匹配
                     if (!string.IsNullOrEmpty(act) && !string.IsNullOrEmpty(sid))
                     {//都存在 
-                        if (DataHelper.CheckPassport(act, token.UserPassport) && DataHelper.CheckSession(sessionId, sid))
+                        if (Command.CheckPassport(act, token.UserPassport) && Command.CheckSession(sessionId, sid))
                         {   //都相同
                             //直接给登录
                             //TODO：踢下线 之后直接允许登录  或者允许重连
@@ -688,20 +830,20 @@ namespace LogicServer
                     if (!string.IsNullOrEmpty(act)) //表示session下面已经绑定账号了
                     {
                         //找到账号
-                        if (!DataHelper.CheckPassport(act, token.UserPassport))
+                        if (!Command.CheckPassport(act, token.UserPassport))
                         {   //账号不相同
-                            await DataHelper.RemoveUserNameBySession(_stateManager, sessionId);
-                            await DataHelper.BindUserNameBySessionAsync(_stateManager, sessionId, token.UserPassport);
-                            await DataHelper.RemoveSessionByUserName(_stateManager, token.UserPassport);
-                            await DataHelper.BindSessionByUserName(_stateManager, token.UserPassport, sessionId);
+                            await SidUidDataHelper.Instance.RemoveUserNameBySidAsync(sessionId);
+                            await SidUidDataHelper.Instance.UpdateUserNameBySidAsync(sessionId, token.UserPassport);
+                            await SidUidDataHelper.Instance.RemoveSidByUserNameAsync(token.UserPassport);
+                            await SidUidDataHelper.Instance.UpdateSidByUserNameAsync(token.UserPassport, sessionId);
                         }
                         else
                         {   //账号相同
-                            await DataHelper.UpdateSessionByUserNameAsync(_stateManager, token.UserPassport, sessionId); //更新session
+                            await SidUidDataHelper.Instance.UpdateSidByUserNameAsync(token.UserPassport, sessionId); //更新session
                             if (!string.IsNullOrEmpty(sid))
                             {
-                                await DataHelper.RemoveUserNameBySession(_stateManager, sid);
-                                await DataHelper.BindUserNameBySessionAsync(_stateManager, sessionId, token.UserPassport);
+                                await SidUidDataHelper.Instance.RemoveUserNameBySidAsync(sid);
+                                await SidUidDataHelper.Instance.UpdateUserNameBySidAsync(sessionId, token.UserPassport);
                             }
                         }
                     }
@@ -712,20 +854,21 @@ namespace LogicServer
                         if (!string.IsNullOrEmpty(sid))
                         {
                             //旧session存在  账号已经绑定session
-                            await DataHelper.RemoveSessionByUserName(_stateManager, token.UserPassport);
-                            await DataHelper.BindSessionByUserName(_stateManager, token.UserPassport, sessionId);
-                            await DataHelper.BindUserNameBySessionAsync(_stateManager, sessionId, token.UserPassport);
+                            await SidUidDataHelper.Instance.RemoveSidByUserNameAsync(token.UserPassport);
+                            await SidUidDataHelper.Instance.UpdateSidByUserNameAsync(token.UserPassport, sessionId);
+                            await SidUidDataHelper.Instance.UpdateUserNameBySidAsync(sessionId, token.UserPassport);
                         }
                         else
                         {//都不存在 直接绑定
-                            await DataHelper.BindSessionByUserName(_stateManager, token.UserPassport, sessionId);   //给账号绑定 session
-                            await DataHelper.BindUserNameBySessionAsync(_stateManager, sessionId, token.UserPassport);     //绑定
+                            await SidUidDataHelper.Instance.UpdateSidByUserNameAsync(token.UserPassport, sessionId);
+                            await SidUidDataHelper.Instance.UpdateUserNameBySidAsync(sessionId, token.UserPassport);
+
+
                         }
 
                     }
                     EqualsReturn:
-                    //给予用户当前角色列表数据
-                    var roles = await DataHelper.GetRoleListsByAccountIdAsync(_stateManager, account1.AccountID);
+                    var roles = await RoleListDataHelper.Instance.GetRoleListByAccountIdAsync(account1.AccountID);
                     if (roles != null)
                     {
                         if (roles.Any())
@@ -739,17 +882,18 @@ namespace LogicServer
                                     Sex = item.Sex
                                 });
                             }
+                            return result;
                         }
                         else
                         {
-                            result.Result = WsResult.NotRole;
+                            result.Result = GameEnum.WsResult.NotRole;
                             //无角色 返回-5
                             return result;
                         }
                     }
                     else
                     {
-                        result.Result = WsResult.NotRole;
+                        result.Result = GameEnum.WsResult.NotRole;
                         //无角色 返回-5
                         return result;
                     }
@@ -758,35 +902,35 @@ namespace LogicServer
 
                 else
                 {
-                    result.Result = WsResult.TokenTimeOut;
+                    result.Result = GameEnum.WsResult.TokenTimeOut;
                     //token 超时
                     return result;
                 }
             }
             else
             {
-                result.Result = WsResult.TokenIsNotExists;
+                result.Result = GameEnum.WsResult.TokenNotExists;
                 //token不存在
                 //拒绝连接
                 return result;
             }
-            //TODO: 修正返回值
-            return result;
         }
 
         private static async Task SessionBindUserPort(string oldSid, string newSid, string oldAct, string newAct)
         {
             if (!string.IsNullOrEmpty(oldAct))
-                await DataHelper.RemoveSessionByUserName(_stateManager, oldAct);   //尝试移除
+                await SidUidDataHelper.Instance.RemoveSidByUserNameAsync(oldAct);
             if (!string.IsNullOrEmpty(newAct))
-                await DataHelper.RemoveSessionByUserName(_stateManager, newAct);   //尝试移除
+                await SidUidDataHelper.Instance.RemoveSidByUserNameAsync(newAct);
             if (!string.IsNullOrEmpty(oldSid))
-                await DataHelper.RemoveUserNameBySession(_stateManager, oldSid);  //不管session有没有 都尝试移除 移除session绑定的账号 重新绑定
+                await SidUidDataHelper.Instance.RemoveUserNameBySidAsync(oldSid);
             if (!string.IsNullOrEmpty(newSid))
-                await DataHelper.RemoveUserNameBySession(_stateManager, newSid);  //不管session有没有 都尝试移除 移除session绑定的账号 重新绑定
+                await SidUidDataHelper.Instance.RemoveUserNameBySidAsync(newSid);
 
-            await DataHelper.BindSessionByUserName(_stateManager, oldAct, newSid);   //给账号绑定session
-            await DataHelper.BindUserNameBySessionAsync(_stateManager, newSid, oldAct);//绑定
+
+
+            await SidUidDataHelper.Instance.SetSidByUserNameAsync(oldAct, newSid);
+            await SidUidDataHelper.Instance.SetUserNameBySidAsync(newSid, oldAct);
         }
 
 
@@ -836,8 +980,8 @@ namespace LogicServer
                 UserName = pid,
             };
 
-            //首先查找pid是否存在
-            var oldAccount = await DataHelper.GetAccountByUserNameAsync(this.StateManager, pid);
+            var oldAccount = await AccountDataHelper.Instance.GetAccountByUserNameAsync(pid);
+
             if (oldAccount != null)
             {
                 //直接返回账号已存在
@@ -848,14 +992,14 @@ namespace LogicServer
                 };
             }
             //不存在 新增账号 保存
-            await DataHelper.BindAccountByUserNameAsync(this.StateManager, pid, newAccount);
-            await DataHelper.BindAccountByAccountIdAsync(this.StateManager, newAccount.AccountID, newAccount);
+            await AccountDataHelper.Instance.SetAccountByUserNameAsync(pid, newAccount);
+            await AccountDataHelper.Instance.SetAccountByAccountIdAsync(newAccount.AccountID, newAccount);
             Login login = new Login()
             {
                 AccountId = newAccount.AccountID,
                 Pid = pid
             };
-            await DataHelper.BindLoginInfoByUserNameAsync(this.StateManager, pid, login); //添加登录数据接口
+            await LoginDataHelper.Instance.SetLoginByUserName(pid, login);
             if (!string.IsNullOrEmpty(imei))
             {   //保存一键注册接口
                 Passport passport = new Passport()
@@ -864,7 +1008,7 @@ namespace LogicServer
                     IMEI = imei,
                     PassportID = newAccount.UserName
                 };
-                await DataHelper.BindPassportByImeiAsync(this.StateManager, imei, passport);
+                await PassportDataHelper.Instance.SetPassportByIMEI(imei, passport);
             }
             return new AccountResult()
             {
@@ -882,14 +1026,12 @@ namespace LogicServer
         public async Task<AccountResult> Passport(string imei)
         {
 
-
-            var pot = await DataHelper.GetPassportByImeiAsync(this.StateManager, imei); //找通行证
+            var pot = await PassportDataHelper.Instance.GetPassportByIMEI(imei);
             if (pot != null)
             {
-                var account = await DataHelper.GetAccountByUserNameAsync(this.StateManager, pot.PassportID);
+                var account = await AccountDataHelper.Instance.GetAccountByUserNameAsync(pot.PassportID);
                 if (account != null)
                 {
-                    //账号存在 直接返回
                     return new AccountResult()
                     {
                         Status = ARsult.AccountIsExists,
@@ -915,10 +1057,11 @@ namespace LogicServer
                     AccountId = account.AccountID,
                     Pid = imei
                 };
-                await DataHelper.BindPassportByImeiAsync(this.StateManager, imei, passport);//注册passport表
-                await DataHelper.BindAccountByUserNameAsync(this.StateManager, account.UserName, account); //注册账号表
-                await DataHelper.BindAccountByAccountIdAsync(this.StateManager, account.AccountID, account); //注册账号表
-                await DataHelper.BindLoginInfoByUserNameAsync(this.StateManager, imei, login);//注册登录表
+                await PassportDataHelper.Instance.SetPassportByIMEI(imei, passport);
+                await AccountDataHelper.Instance.SetAccountByUserNameAsync(account.UserName, account);
+                await AccountDataHelper.Instance.SetAccountByAccountIdAsync(account.AccountID, account);
+                await LoginDataHelper.Instance.SetLoginByIMEI(imei, login);
+
                 return new AccountResult()
                 {
                     Status = ARsult.Ok
@@ -942,21 +1085,21 @@ namespace LogicServer
             {       //使用设备码登录
                     //查询登录表中是否有数据
 
-                var login = await DataHelper.GetLoginInfoByUserNameAsync(this.StateManager, imei);
+                var login = await LoginDataHelper.Instance.GetLoginByUserName(imei);
                 if (login != null)
                 {
-                    var account = await DataHelper.GetAccountByUserNameAsync(this.StateManager, login.Pid);
+                    var account = await AccountDataHelper.Instance.GetAccountByUserNameAsync(login.Pid);
                     if (account != null)
                     {   //账号存在
                         account.LastLoginTime = DateTime.Now;
-                        await DataHelper.UpdateAccountByUserNameAsync(this.StateManager, account.UserName, account);  //更新账号登录时间
+                        await AccountDataHelper.Instance.UpdateAccountByUserNameAsync(account.UserName, account);
                         Token token = new Token()
                         {
                             SignToken = Guid.NewGuid().ToString(),
                             TokenID = account.AccountID,
                             UserPassport = account.UserName
                         };
-                        await DataHelper.BindTokenBySignTokenAsync(this.StateManager, token.SignToken, token);
+                        await TokenDataHelper.Instance.SetTokenBySignToken(token.SignToken, token);
 
                         return new AccountResult()
                         {
@@ -974,11 +1117,11 @@ namespace LogicServer
                 {
                     //验证账号密码
 
-                    var login = await DataHelper.GetLoginInfoByUserNameAsync(this.StateManager, pid);
+                    var login = await LoginDataHelper.Instance.GetLoginByUserName(pid);
                     if (login != null)
                     {
                         var userName = login.Pid;
-                        var account = await DataHelper.GetAccountByUserNameAsync(this.StateManager, userName);
+                        var account = await AccountDataHelper.Instance.GetAccountByUserNameAsync(userName);
                         if (account != null)
                         {
                             //比对密码
@@ -992,7 +1135,7 @@ namespace LogicServer
                                     TokenID = account.AccountID,
                                     UserPassport = pid
                                 };
-                                await DataHelper.BindTokenBySignTokenAsync(this.StateManager, token.SignToken, token);
+                                await TokenDataHelper.Instance.UpdateTokenBySignToken(token.SignToken, token);
                                 return new AccountResult()
                                 {
                                     TokenResult = token
@@ -1030,14 +1173,6 @@ namespace LogicServer
         #endregion
 
 
-        #region helpers
-        private static Character GetDefaultCharacter(int sex)
-        {
-            return Character.GetForId(sex);
-        }
 
-
-
-        #endregion
     }
 }

@@ -94,7 +94,7 @@ namespace Shared.Websockets
             {
                 // dispatch to App provided function with requested
                 //  wsresponse = handler.ProcessWsMessageAsync(value, session.SessionID, cancellationToken).Result;
-                wsresponse = _msgQueue.ProcessWsMessageAsync1(value, session.SessionID, cancellationToken).Result;
+                wsresponse = _msgQueue.ProcessWsMessageAsync(value, session.SessionID, cancellationToken).Result;
             }
             catch (Exception ex)
             {

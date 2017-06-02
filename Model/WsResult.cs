@@ -30,13 +30,13 @@ namespace Model
         /// <summary>
         /// Token不存在
         /// </summary>
-        TokenIsNotExists = 4,
+        TokenNotExists = 4,
         /// <summary>
         /// Token过期
         /// </summary>
         TokenTimeOut = 5,
         /// <summary>
-        /// 用户不存在
+        /// 账号不存在
         /// </summary>
         NotAccount = 6,
         /// <summary>
@@ -46,7 +46,7 @@ namespace Model
         /// <summary>
         /// 角色不存在
         /// </summary>
-        RoleIsNotExists = 8,
+        RoleNotExists = 8,
 
         /// <summary>
         /// 账号中无角色
@@ -101,7 +101,7 @@ namespace Model
         /// </summary>
         DepartmentLvUpErr = 21,
         /// <summary>
-        /// 升级失败 条件没满足
+        /// 部门升级失败 条件没满足
         /// </summary>
         DepartmentLvUpFailed = 22,
         /// <summary>
@@ -128,6 +128,10 @@ namespace Model
         /// 财务部日志不存在
         /// </summary>
         FinanceLogNotExists = 28,
+        /// <summary>
+        /// 空的地图信息
+        /// </summary>
+        NullMapCell = 29,
         /// <summary>
         /// 未定义错误
         /// </summary>

@@ -9,16 +9,35 @@ using System.Runtime.Serialization;
 namespace Model.Data.Npc
 {
     [DataContract]
-    public class UserRole //: BaseNpc
+    public class UserRole //: ICloneable //: BaseNpc
     {
         public UserRole()
         {
             this.UserAttr = new List<UserAttr>();
             this.Avatar = new List<int>();
         }
+        //public object Clone()
+        //{
+        //    UserRole role = (UserRole)this.MemberwiseClone();
+        //    role.Avatar = new List<int>();
+        //    role.UserAttr = new List<Npc.UserAttr>();
+        //    foreach (var a in this.Avatar)
+        //    {
+        //        role.Avatar.Add(a);
+        //    }
+        //    foreach (var u in this.UserAttr)
+        //    {
+        //        role.UserAttr.Add(new Npc.UserAttr()
+        //        {
+        //            Count = u.Count,
+        //            UserAttrID = u.UserAttrID
+        //        });
+        //    }
+        //    return role;
+
+        //}
         public UserRole(int sex, string name, Guid accountId)
         {
-            TxtReader.Init();
             this.AccountId = accountId;
             this.Id = Guid.NewGuid();
             this.Name = name;

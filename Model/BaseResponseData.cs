@@ -8,6 +8,6 @@ namespace Model
 {
     public class BaseResponseData
     {
-        public WsResult Result { get; set; } = WsResult.Success;
+        public GameEnum.WsResult Result { get; set; } = GameEnum.WsResult.Success;
     }
 }

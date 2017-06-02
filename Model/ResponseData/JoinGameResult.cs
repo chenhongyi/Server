@@ -1,4 +1,5 @@
 ﻿using Model.Data.Npc;
+using Model.Protocol;
 using Model.ResponseData.father;
 using ProtoBuf;
 using System;
@@ -99,6 +100,8 @@ namespace Model.ResponseData
         [ProtoMember(32)] public LoadCompanyInfo CompanyInfo { get; set; } = new LoadCompanyInfo();
         [ProtoMember(33)] public LoadDepartMentInfo DepartInfoInfo { get; set; } = new LoadDepartMentInfo();
         [ProtoMember(34)] public List<LoadFinanceLogInfo> FinanceLogInfo { get; set; } = new List<LoadFinanceLogInfo>();
+        [ProtoMember(35)] public GetMapResult MapInfo { get; set; } = new GetMapResult();
+        [ProtoMember(36)] public RoomResult Room { get; set; }
     }
 
     [ProtoContract]
@@ -165,15 +168,11 @@ namespace Model.ResponseData
         /// </summary>
         [ProtoMember(2)] public long CurUsedCell { get; set; }
 
-        [ProtoMember(3)] public List<LoadRoleBagInfo> Items { get; set; } = new List<LoadRoleBagInfo>();
+        [ProtoMember(3)] public Dictionary<int, LoadRoleBagInfo> Items { get; set; } = new Dictionary<int, LoadRoleBagInfo>();
     }
     [ProtoContract]
     public class LoadRoleBagInfo
     {
-        /// <summary>
-        /// 编号
-        /// </summary>
-        [ProtoMember(300)] public long Id { get; set; }
         /// <summary>
         /// 当前叠加数量
         /// </summary>
@@ -209,7 +208,7 @@ namespace Model.ResponseData
         [ProtoMember(2)] public PersonnelInfo PersonnelInfo { get; set; }
         [ProtoMember(3)] public MarketInfo MarketInfo { get; set; }
         [ProtoMember(4)] public InvestmentInfo InvestmentInfo { get; set; }
-      
+
     }
 
     [ProtoContract]
@@ -224,7 +223,7 @@ namespace Model.ResponseData
     }
 
     [ProtoContract]
-    public class MarketInfo 
+    public class MarketInfo
     {
         [ProtoMember(1)] public int Level { get; set; }
         [ProtoMember(2)] public int CurDirectorCounts { get; set; }
@@ -261,5 +260,6 @@ namespace Model.ResponseData
         [ProtoMember(3)] public int Type { get; set; }
         [ProtoMember(4)] public int MoneyType { get; set; }
         [ProtoMember(5)] public long Count { get; set; }
+        [ProtoMember(6)] public bool AorD { get; set; } = true;
     }
 }

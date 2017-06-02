@@ -14,6 +14,6 @@ namespace Model.ResponseData
     public class SellItemResult:BaseResponseData
     {
         [ProtoMember(1)] public BagInfo BagInfo { get; set; } = new BagInfo(); //背包数据
-        [ProtoMember(2)] public long ShenJia { get; set; }  //身价改变
+        [ProtoMember(2)] public long ShenJia { get; set; }
     }
 }

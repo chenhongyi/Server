@@ -10,31 +10,65 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Model.Data.Business;
+using LogicServer.Data.Helper;
 
 namespace LogicServer.Data
 {
     public class MsgSender : BaseInstance<MsgSender>
     {
 
-        public async Task ItemUpdate(IReliableStateManager sm, Guid roleId, int itemId, long count)
+        public async Task ItemUpdate(int itemId, long count)
         {
 
         }
 
-        public async Task GoldUpdate(IReliableStateManager sm, Guid roleId, long count, Currency type)
+
+
+        /// <summary>
+        /// 金钱变动消息
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="roleId"></param>
+        /// <param name="count"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public async Task GoldUpdate(int type)
         {
+
             GoldChangedResult result = new GoldChangedResult()
             {
-                Count = count,
-                GoldType = (int)type
+                GoldType = type
             };
+            var bag = LogicServer.User.bag;
+            if (bag.Items.TryGetValue(type, out Model.Data.General.Item money))
+            {
+                result.Count = money.CurCount;
+            }
             var data = await InitHelpers.GetPse().SerializeAsync(result);
             MsgQueueList msg = new MsgQueueList();
-            await MsgMaker.SendMessage(WSResponseMsgID.GoldChangedResult, 1, roleId, sm, data);
-
+            await MsgMaker.SendMessage(WSResponseMsgID.GoldChangedResult, 1, data);
         }
 
-        internal async Task FinanceLogUpdate(IReliableStateManager sm, Guid roleId, FinanceLogData log)
+
+
+
+        /// <summary>
+        /// 更新身价
+        /// </summary>
+        /// <param name="income"></param>
+        /// <returns></returns>
+        public async Task UpdateIncome()
+        {
+            UpdateShenjiaResult result = new UpdateShenjiaResult();
+            result.SocialStatus = LogicServer.User.role.SocialStatus;
+            var data = await InitHelpers.GetPse().SerializeAsync(result);
+            MsgQueueList msg = new MsgQueueList();
+            await MsgMaker.SendMessage(WSResponseMsgID.UpdateShenjiaResult, 1, data);
+        }
+
+
+
+        internal async Task FinanceLogUpdate(FinanceLogData log)
         {
             TCFinanceLogChangedResult result = new TCFinanceLogChangedResult()
             {
@@ -44,13 +78,15 @@ namespace LogicServer.Data
                     EventName = log.EventName,
                     MoneyType = log.MoneyType,
                     Time = log.Time.ToString(),
-                    Type = (int)log.Type
+                    Type = (int)log.Type,
+                    AorD = log.AorD
                 }
             };
             var data = await InitHelpers.GetPse().SerializeAsync(result);
             MsgQueueList msg = new MsgQueueList();
-            await MsgMaker.SendMessage(WSResponseMsgID.TCFinanceLogChangedResult, 1, roleId, sm, data);
+            await MsgMaker.SendMessage(WSResponseMsgID.TCFinanceLogChangedResult, 1, data);
         }
+
 
     }
 }

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LogicServer.Data
+namespace LogicServer.Controllers
 {
     public class UserAttrController
     {

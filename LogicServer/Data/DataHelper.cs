@@ -44,6 +44,9 @@ namespace LogicServer.Data
         private const string AccountRoleName = "accountRoles";                      //账号和用户名绑定
         private const string IdRoleName = "idRoles";                                //账号id和用户名绑定
         private const string AIdBindAccountName = "aidBindAccount";                 //账号id绑定账号名
+
+
+
         private const string UserNameBindAccountIdName = "userNameBindAccountId";   //用户名绑定账号
         private const string AccoutIdBindUserNameName = "accoutIdBindUserName";     //账号绑定用户名
         private const string RoleIdBindUserAttrsName = "roleIdBindUserAttrs";       //角色名绑定属性
@@ -56,15 +59,50 @@ namespace LogicServer.Data
         private const string RoleIdBindSessionName = "roleIdBindSession";
         //private const string SessionBindTokenName = "sessionBindToken";             //通过session绑定token
         private const string MsgQueueListName = "msgQueneListName";                 //等待发送消息队列
+
+
+
         private const string RoleIdBindCompanyName = "roleIdBindCompany";
         private const string CompanyNameBindCompanyIdName = "companyNameBindCompanyId"; //公司名字绑定公司id    用于检查重名
         private const string RoleIdBindDepartmentName = "roleIdBindDepartment";
         private const string RoleIdBindFinanceLogName = "roleIdBindFinanceLog";
+        private const string PosBindMapCellName = "posBindMapCell";
+        private const string RoleIdBindPosName = "roleIdBindPos";
+
+  
+        private const string ShopIdBindShopPropertyName = "shopIdBindShopProperty";
+        private const string PosBindShopIdName = "posBindShopId";
+        private const string RoleIdBindShopIdName = "roleIdBindShopId";
+
+        private static IReliableDictionary<Guid, List<string>> roleIdBindShopId = null;
+        /// <summary>
+        /// key = pos   value =ShopProperty
+        /// </summary>
+        private static IReliableDictionary<int, string> posBindShopId = null;
+
+
+        /// <summary>
+        /// key = ShopProperty.Id  value = ShopProperty
+        /// </summary>
+        private static IReliableDictionary<string, ShopProperty> shopIdBindShopProperty = null;
+
+        /// <summary>
+        /// key = roleId  value = pos   =  x*1000+ y 
+        /// </summary>
+        private static IReliableDictionary<Guid, List<int>> roleIdBindPos = null;
+
+        /// <summary>
+        /// key = x*1000+y  value = MapProperty
+        /// </summary>
+        private static IReliableDictionary<int, LandProperty> posBindMapCell = null;
+
 
         /// <summary>
         /// key = roleid, value = List<FinanceLogData>
         /// </summary>
         private static IReliableDictionary<Guid, List<FinanceLogData>> roleIdBindFinanceLogList = null;
+
+
 
         /// <summary>
         /// 角色名绑定公司各部门  key = roleid, value = departmentgroup
@@ -143,6 +181,8 @@ namespace LogicServer.Data
         /// </summary>
         private static IReliableDictionary<string, string> sessionUserNameCollection = null;             //session和用户名数据绑定   先绑定到账号上 角色登陆后 修改为绑定到角色上  角色下线 再改为账号 断开连接 删除session
 
+
+
         /// <summary>
         /// string =session string = UserName(用户账号 登录账号 User123456)
         /// </summary>
@@ -157,6 +197,401 @@ namespace LogicServer.Data
 
         #endregion
 
+        /// <summary>
+        /// 通过店铺id绑定店铺
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="shop"></param>
+        /// <returns></returns>
+        public static async Task BindShopByShopIdAsync(IReliableStateManager sm, ShopProperty shop)
+        {
+            try
+            {
+                shopIdBindShopProperty = await sm.GetOrAddAsync<IReliableDictionary<string, ShopProperty>>(ShopIdBindShopPropertyName);
+                using (var tx = sm.CreateTransaction())
+                {
+                    await shopIdBindShopProperty.AddAsync(tx, shop.Id, shop);
+                    await tx.CommitAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+        /// <summary>
+        /// 通过店铺id查找店铺
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="shopId"></param>
+        /// <returns></returns>
+        public static async Task<ShopProperty> GetShopProperty(IReliableStateManager sm, string shopId)
+        {
+            try
+            {
+                shopIdBindShopProperty = await sm.GetOrAddAsync<IReliableDictionary<string, ShopProperty>>(ShopIdBindShopPropertyName);
+                using (var tx = sm.CreateTransaction())
+                {
+                    var shop = await shopIdBindShopProperty.TryGetValueAsync(tx, shopId);
+                    return shop.HasValue ? shop.Value : null;
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+
+
+        /// <summary>
+        /// 通过角色id获取角色店铺id列表信息
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="roleId"></param>
+        /// <returns></returns>
+        public static async Task<List<string>> GetShopIdListByRoleIdAsync(IReliableStateManager sm, Guid roleId)
+        {
+            try
+            {
+                roleIdBindShopId = await sm.GetOrAddAsync<IReliableDictionary<Guid, List<string>>>(RoleIdBindShopIdName);
+                using (var tx = sm.CreateTransaction())
+                {
+                    var shop = await roleIdBindShopId.TryGetValueAsync(tx, roleId);
+                    return shop.HasValue ? shop.Value : null;
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+        public static async Task UpdateShopIdByRoleId(IReliableStateManager sm, Guid roleId, string shopId)
+        {
+            var list = await GetShopIdListByRoleIdAsync(sm, roleId);
+            if (list != null)
+            {
+                try
+                {
+                    list.Add(shopId);
+                    roleIdBindShopId = await sm.GetOrAddAsync<IReliableDictionary<Guid, List<string>>>(RoleIdBindShopIdName);
+                    using (var tx = sm.CreateTransaction())
+                    {
+                        await roleIdBindShopId.SetAsync(tx, roleId, list);
+                        await tx.CommitAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    //TODO 日志
+                    throw ex;
+                }
+            }
+            else
+            {
+                await BindShopByRoleIdAsync(sm, roleId, shopId);
+            }
+        }
+
+        /// <summary>
+        /// 通过角色id绑定店铺id信息
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="roleId"></param>
+        /// <param name="shop"></param>
+        /// <returns></returns>
+        public static async Task BindShopByRoleIdAsync(IReliableStateManager sm, Guid roleId, string shopId)
+        {
+            try
+            {
+                roleIdBindShopId = await sm.GetOrAddAsync<IReliableDictionary<Guid, List<string>>>(RoleIdBindShopIdName);
+                List<string> list = new List<string>();
+                list.Add(shopId);
+                using (var tx = sm.CreateTransaction())
+                {
+                    await roleIdBindShopId.AddAsync(tx, roleId, list);
+                    await tx.CommitAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+
+        }
+
+        /// <summary>
+        /// 通过坐标获取店铺信息
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="pos"></param>
+        /// <returns></returns>
+        public static async Task<string> GetShopIdByPosAsync(IReliableStateManager sm, int pos)
+        {
+            try
+            {
+                posBindShopId = await sm.GetOrAddAsync<IReliableDictionary<int, string>>(PosBindShopIdName);
+                using (var tx = sm.CreateTransaction())
+                {
+                    var shop = await posBindShopId.TryGetValueAsync(tx, pos);
+                    return shop.HasValue ? shop.Value : null;
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// 绑定店铺通过坐标
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="pos"></param>
+        /// <param name="shopId"></param>
+        /// <returns></returns>
+        public static async Task BindShopIdByPosAsync(IReliableStateManager sm, int pos, string shopId)
+        {
+            try
+            {
+                posBindShopId = await sm.GetOrAddAsync<IReliableDictionary<int, string>>(PosBindShopIdName);
+                using (var tx = sm.CreateTransaction())
+                {
+                    await posBindShopId.AddAsync(tx, pos, shopId);
+                    await tx.CommitAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+
+        /// <summary>
+        /// 创建店铺 绑定用户账号和店铺  绑定坐标和店铺  绑定店铺id和店铺
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="shop"></param>
+        /// <param name="roleId"></param>
+        /// <returns></returns>
+        internal static async Task CreateShop(IReliableStateManager sm, int pos, ShopProperty shop, Guid roleId)
+        {
+            await BindShopByRoleIdAsync(sm, roleId, shop.Id);
+            await BindShopIdByPosAsync(sm, pos, shop.Id);
+            await BindShopByShopIdAsync(sm, shop);
+        }
+
+        internal static async Task<LandProperty> BindLandByPosAsync(IReliableStateManager sm, int pos, Guid roleId)
+        {
+            try
+            {
+                posBindMapCell = await sm.GetOrAddAsync<IReliableDictionary<int, LandProperty>>(PosBindMapCellName);
+                LandProperty land = new LandProperty(pos, roleId);
+
+                using (var tx = sm.CreateTransaction())
+                {
+                    await posBindMapCell.AddAsync(tx, pos, land);
+                    await tx.CommitAsync();
+                }
+                await BindPosListByRoleIdAsync(sm, pos, roleId);
+                return land;
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+
+        /// <summary>
+        /// 通过角色id获取角色拥有的土地
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="roleId"></param>
+        /// <returns></returns>
+        internal static async Task<List<LandProperty>> GetRoleLandsByPosAsync(IReliableStateManager sm,  Guid roleId)
+        {
+            try
+            {
+                List<LandProperty> list = new List<LandProperty>();
+                var posList = await GetPosListByRoleIdAsync(sm, roleId);
+                if (posList != null)
+                {
+                    foreach (var p in posList)
+                    {
+                        var land = await GetLandInfo(sm, p);
+                        if (land != null)
+                        {
+                            list.Add(land);
+                        }
+                    }
+                    return list;
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// 通过角色id获取角色拥有的土地坐标
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="roleId"></param>
+        /// <returns></returns>
+        internal static async Task<List<int>> GetPosListByRoleIdAsync(IReliableStateManager sm, Guid roleId)
+        {
+            try
+            {
+                roleIdBindPos = await sm.GetOrAddAsync<IReliableDictionary<Guid, List<int>>>(RoleIdBindPosName);
+                using (var tx = sm.CreateTransaction())
+                {
+                    var data = await roleIdBindPos.TryGetValueAsync(tx, roleId);
+                    return data.HasValue ? data.Value : null;
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+
+
+        /// <summary>
+        /// 绑定坐标通过角色id
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="pos"></param>
+        /// <param name="roleId"></param>
+        /// <returns></returns>
+        internal static async Task BindPosListByRoleIdAsync(IReliableStateManager sm, int pos, Guid roleId)
+        {
+            try
+            {
+                roleIdBindPos = await sm.GetOrAddAsync<IReliableDictionary<Guid, List<int>>>(RoleIdBindPosName);
+                using (var tx = sm.CreateTransaction())
+                {
+                    var list = await roleIdBindPos.TryGetValueAsync(tx, roleId);
+                    if (list.HasValue)
+                    {
+                        var data = list.Value;
+                        data.Add(pos);
+                        await roleIdBindPos.SetAsync(tx, roleId, data);
+                    }
+                    else
+                    {
+                        List<int> data = new List<int>();
+                        data.Add(pos);
+                        await roleIdBindPos.SetAsync(tx, roleId, data);
+                    }
+                    await tx.CommitAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// 通过坐标获取土地信息
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="pos"></param>
+        /// <returns></returns>
+        internal static async Task<LandProperty> GetLandInfo(IReliableStateManager sm, int pos)
+        {
+            try
+            {
+                posBindMapCell = await sm.GetOrAddAsync<IReliableDictionary<int, LandProperty>>(PosBindMapCellName);
+                using (var tx = sm.CreateTransaction())
+                {
+                    var land = await posBindMapCell.TryGetValueAsync(tx, pos);
+                    return land.HasValue ? land.Value : null;
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+
+        internal static async Task<LandProperty> GetMapProperty(IReliableStateManager sm, int pos)
+        {
+            try
+            {
+                posBindMapCell = await sm.GetOrAddAsync<IReliableDictionary<int, LandProperty>>(PosBindMapCellName);
+                using (var tx = sm.CreateTransaction())
+                {
+                    var cell = await posBindMapCell.TryGetValueAsync(tx, pos);
+                    return cell.HasValue ? cell.Value : null;
+                }
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+        }
+
+
+        /// <summary>
+        /// 客户端请求读取土地信息
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="pos"></param>
+        /// <returns></returns>
+        internal static async Task<List<LandProperty>> GetMapPropertys(IReliableStateManager sm, int[] pos)
+        {
+            try
+            {
+                List<LandProperty> list = new List<LandProperty>();
+                posBindMapCell = await sm.GetOrAddAsync<IReliableDictionary<int, LandProperty>>(PosBindMapCellName);
+                using (var tx = sm.CreateTransaction())
+                {
+                    foreach (var p in pos)
+                    {
+                        var cell = await posBindMapCell.TryGetValueAsync(tx, p);
+                        if (cell.HasValue)
+                        {
+                            list.Add(cell.Value);
+                        }
+                    }
+                }
+                return list;
+            }
+            catch (Exception ex)
+            {
+                //TODO 日志
+                throw ex;
+            }
+
+        }
+
+
+        /// <summary>
+        /// 获取财务部日志 通过角色id
+        /// </summary>
+        /// <param name="sm"></param>
+        /// <param name="roleId"></param>
+        /// <returns></returns>
         internal static async Task<List<FinanceLogData>> GetFinanceLogByRoleIdAsync(IReliableStateManager sm, Guid roleId)
         {
             roleIdBindFinanceLogList = await sm.GetOrAddAsync<IReliableDictionary<Guid, List<FinanceLogData>>>(RoleIdBindFinanceLogName);
@@ -190,12 +625,13 @@ namespace LogicServer.Data
                 }
                 else
                 {
+                    var cmpLog = oldLog;
                     var newLog = oldLog.Where(p => p.Time.Date >= DateTime.Now.AddDays(-7)).ToList();
-                    var cmpLog = newLog;
                     newLog.AddRange(log);
                     using (var tx = sm.CreateTransaction())
                     {
-                        await roleIdBindFinanceLogList.TryUpdateAsync(tx, roleId, newLog, cmpLog);
+                        await roleIdBindFinanceLogList.SetAsync(tx, roleId, newLog);
+                        //await roleIdBindFinanceLogList.TryUpdateAsync(tx, roleId, newLog, cmpLog);
                         await tx.CommitAsync();
                     }
                 }
@@ -221,12 +657,13 @@ namespace LogicServer.Data
                 }
                 else
                 {
+                    var cmpLog = oldLog;
                     var newLog = oldLog.Where(p => p.Time.Date >= DateTime.Now.AddDays(-7)).ToList();
-                    var cmpLog = newLog;
                     newLog.Add(log);
                     using (var tx = sm.CreateTransaction())
                     {
-                        await roleIdBindFinanceLogList.TryUpdateAsync(tx, roleId, newLog, cmpLog);
+                        //await roleIdBindFinanceLogList.TryUpdateAsync(tx, roleId, newLog, cmpLog);
+                        await roleIdBindFinanceLogList.SetAsync(tx, roleId, newLog);
                         await tx.CommitAsync();
                     }
                 }
@@ -266,12 +703,13 @@ namespace LogicServer.Data
                 roleIdBindDepartment = await sm.GetOrAddAsync<IReliableDictionary<Guid, DepartmentGroup>>(RoleIdBindDepartmentName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await roleIdBindDepartment.TryUpdateAsync(tx, id, depart, cmp);
+                    //await roleIdBindDepartment.TryUpdateAsync(tx, id, depart, cmp);
+                    await roleIdBindDepartment.SetAsync(tx, id, depart);
                     await tx.CommitAsync();
                 }
                 var config = DepartmentInfo.GetForId(departid);
                 var oldconfig = DepartmentInfo.GetForId(departid - 1);
-                var updateIncome = config.Income - oldconfig.Income;
+                long updateIncome = config.Income - oldconfig.Income;
 
                 await UpdateShenjia(sm, id, updateIncome);  //更新身价
                 await DecGold(sm, id, config.CostGold, Currency.Gold); //减钱
@@ -301,13 +739,12 @@ namespace LogicServer.Data
                 {
                     throw new Exception("该角色背包出错!");
                 }
-                var cmpbg = bg;
                 var money = bg.Items.First(p => p.Id == (int)currency);
                 if (money.CurCount >= costGold)
                 {
                     money.CurCount -= costGold;
                 }
-                UpdateRoleBagByRoleIdAsync(sm, roleId, bg, cmpbg).Wait();
+                UpdateRoleBagByRoleIdAsync(sm, roleId, bg).Wait();
                 await UpdateGoldMsg(sm, roleId, money.CurCount, currency);
 
             }
@@ -348,7 +785,8 @@ namespace LogicServer.Data
                 companyCollection = await sm.GetOrAddAsync<IReliableDictionary<Guid, Company>>(RoleIdBindCompanyName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await companyCollection.TryUpdateAsync(tx, roleId, cmp, old);
+                    //await companyCollection.TryUpdateAsync(tx, roleId, cmp, old);
+                    await companyCollection.SetAsync(tx, roleId, cmp);
                     await tx.CommitAsync();
                 }
                 await UpdateShenjia(sm, roleId, cmpConfig.Income);  //更新身价
@@ -368,12 +806,12 @@ namespace LogicServer.Data
         /// <param name="roleId"></param>
         /// <param name="shenjia">增加的身价值</param>
         /// <returns></returns>
-        internal static async Task UpdateShenjia(IReliableStateManager sm, Guid roleId, int shenjia)
+        internal static async Task UpdateShenjia(IReliableStateManager sm, Guid roleId, long shenjia)
         {
             var role = await GetRoleInfoByRoleIdAsync(sm, roleId);
-            var old = role;
+
             role.SocialStatus += shenjia;
-            await UpdateRoleInfoByRoleIdAsync(sm, roleId, role, old);
+            await UpdateRoleInfoByRoleIdAsync(sm, roleId, role);
             UpdateShenjiaResult result = new UpdateShenjiaResult();
             result.SocialStatus = role.SocialStatus;
             var data = await InitHelpers.GetPse().SerializeAsync(result);
@@ -612,7 +1050,8 @@ namespace LogicServer.Data
                     var role = await roleIdBindUserAttrs.TryGetValueAsync(tx, roleId);
                     if (role.HasValue)
                     {
-                        await roleIdBindUserAttrs.TryUpdateAsync(tx, roleId, userAttr, null);
+                        //await roleIdBindUserAttrs.TryUpdateAsync(tx, roleId, userAttr, null);
+                        await roleIdBindUserAttrs.SetAsync(tx, roleId, userAttr);
                     }
                     else
                     {
@@ -663,14 +1102,14 @@ namespace LogicServer.Data
             var role = await GetRoleInfoByRoleIdAsync(sm, roleId);
             if (role != null)
             {
-                var old = role;
+
                 role.Level++;
                 var levelAttr = Level.GetForLv(role.Level);
                 if (levelAttr != null)
                 {
                     role = AddRoleAttrByLevelUpAsync(sm, role, levelAttr);
 
-                    await UpdateRoleInfoByRoleIdAsync(sm, roleId, role, old);
+                    await UpdateRoleInfoByRoleIdAsync(sm, roleId, role);
                     //通知客户端
 
                     //产生一个通知  通知下发给用户
@@ -764,7 +1203,7 @@ namespace LogicServer.Data
         /// <param name="roleId"></param>
         /// <param name="role"></param>
         /// <returns></returns>
-        public static async Task UpdateRoleInfoByRoleIdAsync(IReliableStateManager sm, Guid roleId, UserRole role, UserRole comp)
+        public static async Task UpdateRoleInfoByRoleIdAsync(IReliableStateManager sm, Guid roleId, UserRole role)
         {
             if (roleId == null) throw new ArgumentNullException();
             if (role == null) throw new ArgumentNullException();
@@ -773,7 +1212,8 @@ namespace LogicServer.Data
                 roleCollection = await sm.GetOrAddAsync<IReliableDictionary<Guid, UserRole>>(RoleName); //角色数据
                 using (var tx = sm.CreateTransaction())
                 {
-                    await roleCollection.TryUpdateAsync(tx, roleId, role, comp);
+                    await roleCollection.SetAsync(tx, roleId, role);
+                    //  await roleCollection.TryUpdateAsync(tx, roleId, role, comp);
                     await tx.CommitAsync();
                 }
             }
@@ -787,53 +1227,52 @@ namespace LogicServer.Data
 
 
 
-        /// <summary>
-        /// 初始化用户基本属性
-        /// </summary>
-        /// <param name="sm"></param>
-        /// <param name="roleId"></param>
-        /// <returns></returns>
-        private static async Task InitRoleBaseInfoByRoleIdAsync(IReliableStateManager sm, Guid roleId)
-        {
-            if (roleId == null) throw new ArgumentNullException();
-            try
-            {
+        ///// <summary>
+        ///// 初始化用户基本属性
+        ///// </summary>
+        ///// <param name="sm"></param>
+        ///// <param name="roleId"></param>
+        ///// <returns></returns>
+        //private static async Task InitRoleBaseInfoByRoleIdAsync(IReliableStateManager sm, Guid roleId)
+        //{
+        //    if (roleId == null) throw new ArgumentNullException();
+        //    try
+        //    {
 
-                var role = await GetRoleInfoByRoleIdAsync(sm, roleId);
-                if (role != null)
-                {
-                    Character u = Character.GetIndex(0);
-                    UserRole user = role;
-                    if (user.Sex == 1)
-                    {
-                        u = Character.GetForId(1);
-                    }
-                    else if (user.Sex == 2)
-                    {
-                        u = Character.GetForId(2);
-                    }
-                    user.Icon = u.Icon;
-                    user.Level = u.Level;
-                    user.Avatar = u.Avatar;
-                    foreach (var attr in u.Attribute)
-                    {
-                        user.UserAttr.Add(new Model.Data.Npc.UserAttr()
-                        {
-                            Count = attr.Count,
-                            UserAttrID = attr.AttributeID
-                        });
-                    }
-                    await UpdateRoleInfoByRoleIdAsync(sm, roleId, user, role);
-                }
+        //        var role = await GetRoleInfoByRoleIdAsync(sm, roleId);
+        //        if (role != null)
+        //        {
+        //            Character u = Character.GetIndex(0);
+        //            if (role.Sex == 1)
+        //            {
+        //                u = Character.GetForId(1);
+        //            }
+        //            else if (role.Sex == 2)
+        //            {
+        //                u = Character.GetForId(2);
+        //            }
+        //            role.Icon = u.Icon;
+        //            role.Level = u.Level;
+        //            role.Avatar = u.Avatar;
+        //            foreach (var attr in u.Attribute)
+        //            {
+        //                role.UserAttr.Add(new Model.Data.Npc.UserAttr()
+        //                {
+        //                    Count = attr.Count,
+        //                    UserAttrID = attr.AttributeID
+        //                });
+        //            }
+        //            await UpdateRoleInfoByRoleIdAsync(sm, roleId, role);
+        //        }
 
-            }
-            catch (Exception ex)
-            {
-                //TODO
-                throw ex;
-            }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        //TODO
+        //        throw ex;
+        //    }
 
-        }
+        //}
 
 
 
@@ -854,7 +1293,8 @@ namespace LogicServer.Data
                 roleIdBindUserAttrs = await sm.GetOrAddAsync<IReliableDictionary<Guid, List<Model.Data.Npc.UserAttr>>>(RoleIdBindUserAttrsName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await roleIdBindUserAttrs.TryUpdateAsync(tx, roleId, userAttr, null);
+                    await roleIdBindUserAttrs.SetAsync(tx, roleId, userAttr);
+                    //await roleIdBindUserAttrs.TryUpdateAsync(tx, roleId, userAttr, null);
                     await tx.CommitAsync();
                 }
             }
@@ -937,7 +1377,8 @@ namespace LogicServer.Data
                 RoleIdBindSession = await sm.GetOrAddAsync<IReliableDictionary<Guid, string>>(RoleIdBindSessionName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await RoleIdBindSession.TryUpdateAsync(tx, roleId, session, cmpSid);
+                    //await RoleIdBindSession.TryUpdateAsync(tx, roleId, session, cmpSid);
+                    await RoleIdBindSession.SetAsync(tx, roleId, session);
                     await tx.CommitAsync();
                 }
             }
@@ -1086,7 +1527,8 @@ namespace LogicServer.Data
                     var onlineR = await sessionBindRole.TryGetValueAsync(tx, sessionId);
                     if (onlineR.HasValue)
                     {
-                        await sessionBindRole.TryUpdateAsync(tx, sessionId, role, null);
+                        //await sessionBindRole.TryUpdateAsync(tx, sessionId, role, null);
+                        await sessionBindRole.SetAsync(tx, sessionId, role);
                         await tx.CommitAsync();
                     }
                 }
@@ -1388,7 +1830,8 @@ namespace LogicServer.Data
                 sessionUserNameCollection = await sm.GetOrAddAsync<IReliableDictionary<string, string>>(SessionCollectionName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await sessionUserNameCollection.TryUpdateAsync(tx, userName, sessionId, null);
+                    // await sessionUserNameCollection.TryUpdateAsync(tx, userName, sessionId, null);
+                    await sessionUserNameCollection.SetAsync(tx, userName, sessionId);
                     await tx.CommitAsync();
                 }
             }
@@ -1415,7 +1858,8 @@ namespace LogicServer.Data
                 userNameSessionCollection = await sm.GetOrAddAsync<IReliableDictionary<string, string>>(UserNameSessionName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await userNameSessionCollection.TryUpdateAsync(tx, sessionId, userName, null);
+                    await userNameSessionCollection.SetAsync(tx, sessionId, userName);
+                    //await userNameSessionCollection.TryUpdateAsync(tx, sessionId, userName, null);
                     await tx.CommitAsync();
                 }
             }
@@ -1682,7 +2126,7 @@ namespace LogicServer.Data
         /// <param name="roleId"></param>
         /// <param name="box"></param>
         /// <returns></returns>
-        public static async Task UpdateRoleBagByRoleIdAsync(IReliableStateManager sm, Guid roleId, Bag newBg, Bag oldBg)
+        public static async Task UpdateRoleBagByRoleIdAsync(IReliableStateManager sm, Guid roleId, Bag newBg)
         {
             if (roleId == null) throw new ArgumentNullException();
             if (newBg == null) throw new ArgumentNullException();
@@ -1691,7 +2135,8 @@ namespace LogicServer.Data
                 roleIdBindBag = await sm.GetOrAddAsync<IReliableDictionary<Guid, Bag>>(RoleIdBindBagName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await roleIdBindBag.TryUpdateAsync(tx, roleId, newBg, oldBg);
+                    await roleIdBindBag.SetAsync(tx, roleId, newBg);
+                    //await roleIdBindBag.TryUpdateAsync(tx, roleId, newBg, oldBg);
                     await tx.CommitAsync();
                 }
             }
@@ -1744,7 +2189,8 @@ namespace LogicServer.Data
                 tokenCollection = await sm.GetOrAddAsync<IReliableDictionary<string, Token>>(TokenCollectionName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await tokenCollection.TryUpdateAsync(tx, signToken, token, null);
+                    //await tokenCollection.TryUpdateAsync(tx, signToken, token, null);
+                    await tokenCollection.SetAsync(tx, signToken, token);
                     await tx.CommitAsync();
                 }
             }
@@ -1849,7 +2295,8 @@ namespace LogicServer.Data
                 tokenCollection = await sm.GetOrAddAsync<IReliableDictionary<string, Token>>(TokenCollectionName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await tokenCollection.TryUpdateAsync(tx, sessionId, token, null);
+                    await tokenCollection.SetAsync(tx, sessionId, token);
+                    //await tokenCollection.TryUpdateAsync(tx, sessionId, token, null);
                     await tx.CommitAsync();
                 }
             }
@@ -1931,7 +2378,8 @@ namespace LogicServer.Data
                 accountRoleCollection = await sm.GetOrAddAsync<IReliableDictionary<Guid, List<UserRole>>>(AccountRoleName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await accountRoleCollection.TryUpdateAsync(tx, accountID, roles, null);
+                    await accountRoleCollection.SetAsync(tx, accountID, roles);
+                    // await accountRoleCollection.TryUpdateAsync(tx, accountID, roles, null);
                     await tx.CommitAsync();
                 }
                 await RoleNumberController(sm, accountID, addOrDec); //增加新角色了 需要给账号字段中的RoleNumber++
@@ -2017,7 +2465,8 @@ namespace LogicServer.Data
                 aIdBindAccount = await sm.GetOrAddAsync<IReliableDictionary<Guid, Account>>(AIdBindAccountName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await aIdBindAccount.TryUpdateAsync(tx, accountID, accountNewData, null);
+                    //await aIdBindAccount.TryUpdateAsync(tx, accountID, accountNewData, null);
+                    await aIdBindAccount.SetAsync(tx, accountID, accountNewData);
                     await tx.CommitAsync();
                 }
             }
@@ -2045,7 +2494,9 @@ namespace LogicServer.Data
                 accountsCollection = await sm.GetOrAddAsync<IReliableDictionary<string, Account>>(AccountsCollectionName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await accountsCollection.TryUpdateAsync(tx, userName, accountNewData, null);
+
+                    await accountsCollection.SetAsync(tx, userName, accountNewData);
+                    //await accountsCollection.TryUpdateAsync(tx, userName, accountNewData, null);
                     await tx.CommitAsync();
                 }
             }
@@ -2177,7 +2628,8 @@ namespace LogicServer.Data
                 loginCollection = await sm.GetOrAddAsync<IReliableDictionary<string, Login>>(LoginCollectionName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await loginCollection.TryUpdateAsync(tx, userName, newLoginInfo, null);
+                    await loginCollection.SetAsync(tx, userName, newLoginInfo);
+                    //await loginCollection.TryUpdateAsync(tx, userName, newLoginInfo, null);
                     await tx.CommitAsync();
                 }
             }
@@ -2256,7 +2708,8 @@ namespace LogicServer.Data
                 passportCollection = await sm.GetOrAddAsync<IReliableDictionary<string, Passport>>(PassportCollectionName);
                 using (var tx = sm.CreateTransaction())
                 {
-                    await passportCollection.TryUpdateAsync(tx, imei, newPassport, null);
+                    await passportCollection.SetAsync(tx, imei, newPassport);
+                    //await passportCollection.TryUpdateAsync(tx, imei, newPassport, null);
                     await tx.CommitAsync();
                 }
             }

@@ -14,22 +14,56 @@ namespace Model.Data.Npc
     [DataContract]
     public class Bag
     {
+        public Bag(Bag bag)
+        {
+            this.CurUsedCell = bag.CurUsedCell;
+            this.MaxCellNumber = bag.MaxCellNumber;
+            this.Items = bag.Items;
+        }
         public Bag()
         {
             this.MaxCellNumber = 999;
             this.CurUsedCell = 0;
+            this.Items = new Dictionary<int, Item>();
 #if DEBUG
-            this.Items = new List<Item>{
-            new Item {  CurCount = 50000000, Id = 1, OnSpace = 0}, //钞票
-            new Item {  CurCount = 50000000, Id = 2, OnSpace = 0}, //金砖
-            new Item {  CurCount = 50000000, Id = 3, OnSpace = 0}  //创客币
+
+            this.Items.Add(1, new Item()//钞票
+            {
+                CurCount = 100000,
+                OnSpace = 0
+            });
+            this.Items.Add(2, new Item()//金砖
+            {
+                OnSpace = 0,
+                CurCount = 100000
+            });
+            this.Items.Add(3, new Item()//创客币
+            {
+                OnSpace = 0,
+                CurCount = 100000
+            });
+
+            {
+                //new Item {  CurCount = 500000, Id = 1, OnSpace = 0}, //钞票
+                //new Item {  CurCount = 500000, Id = 2, OnSpace = 0}, //金砖
+                //new Item {  CurCount = 500000, Id = 3, OnSpace = 0}  //创客币
             };
 #else
-              this.Items = new List<Item>{
-            new Item {  CurCount = 0, Id = 1, OnSpace = 0}, //钞票
-            new Item {  CurCount = 0, Id = 2, OnSpace = 0}, //金砖
-            new Item {  CurCount = 0, Id = 3, OnSpace = 0}  //创客币
-            };
+             this.Items.Add(1, new Item()//钞票
+            {
+                CurCount = 0,
+                OnSpace = 0
+            });
+            this.Items.Add(2, new Item()//金砖
+            {
+                OnSpace = 0,
+                CurCount = 0
+            });
+            this.Items.Add(3, new Item()//创客币
+            {
+                OnSpace = 0,
+                CurCount = 0
+            });
 #endif
         }
         /// <summary>
@@ -41,12 +75,8 @@ namespace Model.Data.Npc
         /// </summary>
         [DataMember] public long CurUsedCell { get; set; }
 
-        /// <summary>
-        /// 二次密码
-        /// </summary>
-        [DataMember] public string Password { get; set; }
 
-        [DataMember] public List<Item> Items { get; set; }
+        [DataMember] public Dictionary<int, Item> Items { get; set; }
 
     }
 }

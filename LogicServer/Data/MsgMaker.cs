@@ -1,4 +1,5 @@
 ﻿using LogicServer;
+using LogicServer.Data.Helper;
 using Microsoft.ServiceFabric.Data;
 using Model;
 using Model.MsgQueue;
@@ -17,7 +18,7 @@ namespace LogicServer.Data
 {
     public static class MsgMaker
     {
-        static IPublicGate  gate = ConnectionFactory.CreatePublicGateService();
+        static IPublicGate gate = ConnectionFactory.CreatePublicGateService();
         public static async Task<byte[]> Make(WSResponseMsgID msgId, byte[] data)
         {
             WsResponseMessage result = new WsResponseMessage();
@@ -27,13 +28,15 @@ namespace LogicServer.Data
             return await InitHelpers.GetMse().SerializeAsync(result);
         }
 
-        public static async Task SendMessage(WSResponseMsgID msgId, int roleCount, Guid roleId, IReliableStateManager sm, byte[] data )
+        public static async Task SendMessage(WSResponseMsgID msgId, int roleCount, byte[] data)
         {
             MsgQueueList msg = new MsgQueueList();
+            var roleId = LogicServer.User.role.Id;
             msg.MsgType = msgId;
             msg.RoleCount = roleCount;
-            msg.Roles.Add(await DataHelper.GetOnlineSessionByRoleIdAsync(sm, roleId));
-            msg.Data = await MsgMaker.Make(msgId, data);
+
+            msg.Roles.Add(await SidRoleIdDataHelper.Instance.GetSidByRoleIdAsync(roleId));
+            msg.Data = await Make(msgId, data);
             switch (msg.RoleCount)
             {
                 case 1: //一人

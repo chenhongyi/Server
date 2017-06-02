@@ -14,10 +14,6 @@ namespace Model.Data.General
     public class Item
     {
         /// <summary>
-        /// 编号
-        /// </summary>
-        [DataMember] public int Id { get; set; }
-        /// <summary>
         /// 当前叠加数量
         /// </summary>
         [DataMember] public long CurCount { get; set; } 

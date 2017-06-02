@@ -16,7 +16,7 @@ namespace LogicServer.Interface
         Task<AccountResult> Passport(string imei);
         Task<AccountResult> Login(string pid, string pwd, string imei, string ip);
 
-        Task<byte[]> ProcessWsMessageAsync1(byte[] wsrequest, string session, CancellationToken cancellationToken);
+        Task<byte[]> ProcessWsMessageAsync(byte[] wsrequest, string session, CancellationToken cancellationToken);
 
         //TODO: 修改密码没做
         //Task<string> Password();

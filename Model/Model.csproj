@@ -68,39 +68,57 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AutoDatas\Building.cs" />
+    <Compile Include="AutoDatas\BuildingLevel.cs" />
     <Compile Include="AutoDatas\CompanyInfo.cs" />
+    <Compile Include="AutoDatas\Companyname.cs" />
     <Compile Include="AutoDatas\DepartmentInfo.cs" />
+    <Compile Include="AutoDatas\Extension.cs" />
+    <Compile Include="AutoDatas\LandInfo.cs" />
     <Compile Include="AutoDatas\LocalString.cs" />
+    <Compile Include="AutoDatas\Room.cs" />
     <Compile Include="BaseResponseData.cs" />
     <Compile Include="Data\Account\Account.cs" />
     <Compile Include="Data\Business\Company.cs" />
     <Compile Include="Data\Business\Department.cs" />
     <Compile Include="Data\Business\Employee.cs" />
     <Compile Include="Data\Business\FinanceLogData.cs" />
+    <Compile Include="Data\Business\BuildData.cs" />
+    <Compile Include="Data\Business\LandData.cs" />
     <Compile Include="Data\General\Item.cs" />
+    <Compile Include="Data\Npc\Room.cs" />
     <Compile Include="Data\Npc\UserAttr.cs" />
     <Compile Include="Data\Npc\IdRole.cs" />
     <Compile Include="Data\Npc\Bag.cs" />
     <Compile Include="MsgQueue\MsgQueueList.cs" />
     <Compile Include="RequestData\AddItemReq.cs" />
+    <Compile Include="RequestData\BuyLandReq.cs" />
     <Compile Include="RequestData\ChangeAvatarReq.cs" />
     <Compile Include="RequestData\CompanyLvUpReq.cs" />
     <Compile Include="RequestData\CreateCompanyReq.cs" />
+    <Compile Include="RequestData\CreateBuildReq.cs" />
     <Compile Include="RequestData\DeleteRoleReq.cs" />
     <Compile Include="RequestData\DepartmentUpdateReq.cs" />
+    <Compile Include="RequestData\DestoryBuildReq.cs" />
+    <Compile Include="RequestData\GetMapReq.cs" />
     <Compile Include="RequestData\JoinGameReq.cs" />
     <Compile Include="RequestData\RemoveItemReq.cs" />
+    <Compile Include="Protocol\RoomProto.cs" />
     <Compile Include="RequestData\SellItemReq.cs" />
     <Compile Include="RequestData\UseItemReq.cs" />
     <Compile Include="ResponseData\AddItemResult.cs" />
+    <Compile Include="ResponseData\BuyLandResult.cs" />
     <Compile Include="ResponseData\ChangeAvatarResult.cs" />
     <Compile Include="ResponseData\CompanyLvUpResult.cs" />
     <Compile Include="ResponseData\ConnectingResult.cs" />
     <Compile Include="ResponseData\CreateCompanyResult.cs" />
     <Compile Include="ResponseData\CreateRoleResult.cs" />
+    <Compile Include="ResponseData\CreateBuildResult.cs" />
     <Compile Include="ResponseData\DeleteRoleResult.cs" />
     <Compile Include="ResponseData\DepartmentUpdateResult.cs" />
+    <Compile Include="ResponseData\DestoryBuildResult.cs" />
     <Compile Include="ResponseData\father\ItemBase.cs" />
+    <Compile Include="ResponseData\GetMapResult.cs" />
     <Compile Include="ResponseData\LoadFinanceLogResult.cs" />
     <Compile Include="ResponseData\GoldChangedResult.cs" />
     <Compile Include="ResponseData\JoinGameResult.cs" />
@@ -146,16 +164,51 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <Content Include="DataConfig\Avatar.txt" />
-    <Content Include="DataConfig\Character.txt" />
-    <Content Include="DataConfig\CompanyInfo.txt" />
-    <Content Include="DataConfig\Companyname.txt" />
-    <Content Include="DataConfig\DepartmentInfo.txt" />
-    <Content Include="DataConfig\item.txt" />
-    <Content Include="DataConfig\Level.txt" />
-    <Content Include="DataConfig\LocalString.txt" />
-    <Content Include="DataConfig\Randomname.txt" />
-    <Content Include="DataConfig\roomfurniture.txt" />
+    <Content Include="DataConfig\Avatar.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\Building.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\BuildingLevel.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\Character.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\CompanyInfo.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\Companyname.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\DepartmentInfo.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\Extension.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\item.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\LandInfo.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\Level.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\LocalString.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\Randomname.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\Room.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataConfig\roomfurniture.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Data\Readme.txt" />
     <Content Include="RequestData\Readme.txt" />
     <Content Include="ResponseData\Readme.txt" />

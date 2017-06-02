@@ -11,19 +11,26 @@ namespace Model.Data.Business
     public class FinanceLogData
     {
         [DataMember] public DateTime Time { get; set; } = DateTime.Now;
-        [DataMember] public string EventName { get; set; }
-        [DataMember] public FinanceLogType Type { get; set; }
+        /// <summary>
+        /// 事件名称
+        /// </summary>
+        [DataMember] public string EventName { get; set; } = string.Empty;
+        /// <summary>
+        /// 事件类型
+        /// </summary>
+        [DataMember] public int Type { get; set; }
+        /// <summary>
+        /// 消耗货币类型
+        /// </summary>
         [DataMember] public int MoneyType { get; set; }
+        /// <summary>
+        /// 消耗货币数量
+        /// </summary>
         [DataMember] public long Count { get; set; }
-    }
 
-    [DataContract]
-    public enum FinanceLogType
-    {
-        [EnumMember] DonateGold = 1,//捐献金砖
-        [EnumMember] GetGain = 2,   //领取店铺收益
-        [EnumMember] BuyClothes = 3,//够买时装
-        [EnumMember] SellItem = 4,  //卖出物品
-        [EnumMember] BuyItems = 5 //购买物品
+        /// <summary>
+        /// ture 是 增加 false是减少
+        /// </summary>
+        [DataMember] public bool AorD { get; set; } = true;
     }
 }
