@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace Shared.Websockets
 {
-     public class SessionPool: BaseInstance<SessionPool>
+     public  class SessionPool: BaseInstance<SessionPool>
     {
-        Dictionary<string, WebSocketSession> _sessions;
+        static Dictionary<string, WebSocketSession> _sessions;
         private Dictionary<string, WebSocketSession> sessions
         {
             get

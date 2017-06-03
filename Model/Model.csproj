@@ -91,6 +91,11 @@
     <Compile Include="Data\Npc\IdRole.cs" />
     <Compile Include="Data\Npc\Bag.cs" />
     <Compile Include="MsgQueue\MsgQueueList.cs" />
+    <Compile Include="Protocol\BuildExtendProto.cs" />
+    <Compile Include="Protocol\BuildLvUpProto.cs" />
+    <Compile Include="Protocol\ItemProto.cs" />
+    <Compile Include="Protocol\TCBuildProto.cs" />
+    <Compile Include="Protocol\TCDepartmentProto.cs" />
     <Compile Include="RequestData\AddItemReq.cs" />
     <Compile Include="RequestData\BuyLandReq.cs" />
     <Compile Include="RequestData\ChangeAvatarReq.cs" />

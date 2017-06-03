@@ -145,6 +145,23 @@ namespace LogicServer.Data.Helper
                 await tx.CommitAsync();
             }
         }
+        public async Task RemoveOneBuildIdByRoleId(Guid roleId, string buildId)
+        {
+            var db = GetGuid(LogicServer.Instance.StateManager).Result;
+            var list = await GetBuildIdListByRoleId(roleId);
+            if (list != null)
+            {
+                if (list.Contains(buildId))
+                {
+                    list.Remove(buildId);
+                    using (var tx = LogicServer.Instance.StateManager.CreateTransaction())
+                    {
+                        await db.SetAsync(tx, roleId, list);
+                        await tx.CommitAsync();
+                    }
+                }
+            }
+        }
 
         public async Task SetBuildIdListByRoleId(Guid roleId, List<string> buildId, ITransaction tx)
         {
@@ -175,7 +192,26 @@ namespace LogicServer.Data.Helper
             {
                 list.Add(buildId);
             }
+            else
+            {
+                list = new List<string>();
+                list.Add(buildId);
+            }
             await db.SetAsync(tx, roleId, list);
+        }
+
+        public async Task RemoveOneBuildIdByRoleId(Guid roleId, string buildId, ITransaction tx)
+        {
+            var db = GetGuid(LogicServer.Instance.StateManager).Result;
+            var list = await GetBuildIdListByRoleId(roleId);
+            if (list != null)
+            {
+                if (list.Contains(buildId))
+                {
+                    list.Remove(buildId);
+                    await db.SetAsync(tx, roleId, list);
+                }
+            }
         }
 
         public async Task RemoveBuildIdByRoleId(Guid roleId, ITransaction tx)

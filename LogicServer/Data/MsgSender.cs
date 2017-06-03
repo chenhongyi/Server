@@ -11,6 +11,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Model.Data.Business;
 using LogicServer.Data.Helper;
+using Model.Protocol;
+using Model.Data.Npc;
 
 namespace LogicServer.Data
 {
@@ -19,9 +21,16 @@ namespace LogicServer.Data
 
         public async Task ItemUpdate(int itemId, long count)
         {
-
+            var result = new UpdateItemResult() { Items = new List<ItemInfoCls>() { new ItemInfoCls() { ItemId = itemId, Count = count } } };
+            await MsgMaker.SendMessage(WSResponseMsgID.UpdateItemResult, result);
         }
 
+
+        public async Task UseItem(int itemId, long count)
+        {
+            var result = await Controllers.BagController.Instance.UseItemsAsync(null, Guid.Empty, itemId, count);
+            await MsgMaker.SendMessage(WSResponseMsgID.AddItemResult, result);
+        }
 
 
         /// <summary>
@@ -32,7 +41,7 @@ namespace LogicServer.Data
         /// <param name="count"></param>
         /// <param name="type"></param>
         /// <returns></returns>
-        public async Task GoldUpdate(int type)
+        public async Task UpdateGold(int type)
         {
 
             GoldChangedResult result = new GoldChangedResult()
@@ -45,7 +54,6 @@ namespace LogicServer.Data
                 result.Count = money.CurCount;
             }
             var data = await InitHelpers.GetPse().SerializeAsync(result);
-            MsgQueueList msg = new MsgQueueList();
             await MsgMaker.SendMessage(WSResponseMsgID.GoldChangedResult, 1, data);
         }
 
@@ -62,13 +70,18 @@ namespace LogicServer.Data
             UpdateShenjiaResult result = new UpdateShenjiaResult();
             result.SocialStatus = LogicServer.User.role.SocialStatus;
             var data = await InitHelpers.GetPse().SerializeAsync(result);
-            MsgQueueList msg = new MsgQueueList();
             await MsgMaker.SendMessage(WSResponseMsgID.UpdateShenjiaResult, 1, data);
         }
 
 
+        public async Task BuildExtendFailed(BuildExtendFailedResult result)
+        {
+            var data = await InitHelpers.GetPse().SerializeAsync(result);
+            await MsgMaker.SendMessage(WSResponseMsgID.BuildExtendFailedResult, 1, data);
+        }
 
-        internal async Task FinanceLogUpdate(FinanceLogData log)
+
+        public async Task FinanceLogUpdate(FinanceLogData log)
         {
             TCFinanceLogChangedResult result = new TCFinanceLogChangedResult()
             {
@@ -83,10 +96,38 @@ namespace LogicServer.Data
                 }
             };
             var data = await InitHelpers.GetPse().SerializeAsync(result);
-            MsgQueueList msg = new MsgQueueList();
             await MsgMaker.SendMessage(WSResponseMsgID.TCFinanceLogChangedResult, 1, data);
         }
 
 
+        /// <summary>
+        /// 更新部门之投资部
+        /// </summary>
+        /// <param name="department"></param>
+        /// <returns></returns>
+
+        public async Task UpdateDepartmentInvestment(Department department)
+        {
+            TCDepartmentInvestmentResult result = new TCDepartmentInvestmentResult()
+            {
+                InvestmentInfo = new InvestmentInfo()
+                {
+                    CurDirectorCounts = department.CurDirectorCounts,
+                    CurExtension = department.CurExtension,
+                    CurRealestate = department.CurRealestate,
+                    CurStaff = department.CurStaff,
+                    CurStore = department.CurStore,
+                    Level = department.Level
+                }
+            };
+            var data = await InitHelpers.GetPse().SerializeAsync(result);
+            await MsgMaker.SendMessage(WSResponseMsgID.TCDepartmentInvestmentResult, 1, data);
+        }
+
+        public async Task BuildLvUpFailed(BuildLvUpFailedResult failed)
+        {
+            var data = await InitHelpers.GetPse().SerializeAsync(failed);
+            await MsgMaker.SendMessage(WSResponseMsgID.BuildLvUpFailedResult, 1, data);
+        }
     }
 }

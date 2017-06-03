@@ -31,8 +31,8 @@ namespace Model.ResponseData
     [ProtoContract]
     public class LoadBuildInfo
     {
-        [ProtoMember(1)] public string ShopId { get; set; }
-        [ProtoMember(2)] public int ShopType { get; set; }
+        [ProtoMember(1)] public string BuildId { get; set; }
+        [ProtoMember(2)] public int BuildType { get; set; }
         [ProtoMember(3)] public string Name { get; set; }
         [ProtoMember(4)] public int TodayCanAdvartise { get; set; }
         [ProtoMember(5)] public int Level { get; set; }
@@ -40,6 +40,8 @@ namespace Model.ResponseData
         [ProtoMember(7)] public int Star { get; set; }
         [ProtoMember(8)] public int Employee { get; set; }
         [ProtoMember(9)] public long GetMoney { get; set; }
-        [ProtoMember(10)]public int Pos { get; set; }
+        [ProtoMember(10)] public int Pos { get; set; }
+        [ProtoMember(11)] public string RoleId { get; set; }
+        [ProtoMember(12)] public int CustomerAddtion { get; set; }
     }
 }

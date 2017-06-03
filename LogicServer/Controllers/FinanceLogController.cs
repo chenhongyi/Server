@@ -78,7 +78,7 @@ namespace LogicServer.Controllers
 
         public async Task UpdateFinanceLog(Guid roleId, FinanceLogData log, ITransaction tx)
         {
-            var loglist = await FinanceLogListDataHelper.Instance.Get(roleId);
+            var loglist = await FinanceLogListDataHelper.Instance.Get(roleId, tx);
 
             if (loglist == null)
             {

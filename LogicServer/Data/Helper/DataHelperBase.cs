@@ -68,6 +68,13 @@ namespace LogicServer.Data.Helper
             }
         }
 
+        public async Task<TData> Get(string key, ITransaction tx)
+        {
+            var db = await GetString(sm);
+                var value = await db.TryGetValueAsync(tx, key);
+                return value.HasValue ? value.Value : (TData)(object)null;
+        }
+
         public async Task Set(string key, TData data)
         {
             var db = await GetString(sm);
@@ -161,7 +168,12 @@ namespace LogicServer.Data.Helper
                 await tx.CommitAsync();
             }
         }
-
+        public async Task<TData> Get(int key, ITransaction tx)
+        {
+            var db = await GetInt(sm);
+                var value = await db.TryGetValueAsync(tx, key);
+                return value.HasValue ? value.Value : (TData)(object)null;
+        }
 
         public async Task Set(int key, TData data, ITransaction tx)
         {
@@ -224,7 +236,12 @@ namespace LogicServer.Data.Helper
             }
         }
 
-
+        public async Task<TData> Get(long key, ITransaction tx)
+        {
+            var db = await GetLong(sm);
+                var value = await db.TryGetValueAsync(tx, key);
+                return value.HasValue ? value.Value : (TData)(object)null;
+        }
         public async Task Set(long key, TData data, ITransaction tx)
         {
             var db = await GetLong(sm);
@@ -256,6 +273,13 @@ namespace LogicServer.Data.Helper
                 return value.HasValue ? value.Value : (TData)(object)null;
             }
         }
+        public async Task<TData> Get(Guid key, ITransaction tx)
+        {
+            var db = await GetGuid(sm);
+            var value = await db.TryGetValueAsync(tx, key);
+            return value.HasValue ? value.Value : (TData)(object)null;
+        }
+
 
         public async Task Set(Guid key, TData data)
         {

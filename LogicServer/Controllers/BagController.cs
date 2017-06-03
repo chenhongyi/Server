@@ -31,8 +31,8 @@ namespace LogicServer.Controllers
 
         public bool CheckMoney(long money, int moneyType)
         {
-            if (GetMoney(moneyType) >= money)
-                return true;
+            if (money < 0) return false;
+            if (GetMoney(moneyType) >= money) return true;
             return false;
         }
 
@@ -112,17 +112,15 @@ namespace LogicServer.Controllers
             await UpdateAvaterAsync(id, parts);
 
             ///构造返回
-            var roleAttrList = await RoleAttrListDataHelper.Instance.GetRoleAttrByRoleId(role.Id);
-            if (roleAttrList != null)
+
+
+            foreach (var art in role.UserAttr)
             {
-                foreach (var art in roleAttrList)
+                result.ChangeAttr.Add(new Model.ResponseData.UserAttr()
                 {
-                    result.ChangeAttr.Add(new Model.ResponseData.UserAttr()
-                    {
-                        Count = art.Count,
-                        UserAttrID = art.UserAttrID
-                    });
-                }
+                    Count = art.Count,
+                    UserAttrID = art.UserAttrID
+                });
             }
 
             result.BagInfo.CurUsedCell = LogicServer.User.bag.CurUsedCell;
@@ -412,6 +410,18 @@ namespace LogicServer.Controllers
         }
 
         /// <summary>
+        /// 获得当道道具在背包中的数量
+        /// </summary>
+        /// <param name="itemId"></param>
+        /// <returns></returns>
+        public long GetItemCount(int itemId)
+        {
+            var bgInfo = LogicServer.User.bag;    //获取包中的道具
+            if (!bgInfo.Items.TryGetValue(itemId, out Model.Data.General.Item item)) return 0;
+            return item.CurCount;
+        }
+
+        /// <summary>
         /// 使用普通道具
         /// </summary>
         /// <param name="sm"></param>
@@ -531,7 +541,7 @@ namespace LogicServer.Controllers
             {
                 Count = moneyCount,
                 MoneyType = moneyId,
-                Type = (int )GameEnum.FinanceLog.SellItem
+                Type = (int)GameEnum.FinanceLog.SellItem
             };
             await FinanceLogController.Instance.UpdateFinanceLog(roleId, loginfo);
             await MsgSender.Instance.FinanceLogUpdate(loginfo);
@@ -661,6 +671,7 @@ namespace LogicServer.Controllers
             foreach (var b in itemCount)
             {
                 var itemTemplate = GetItemById(b.Key);
+                var stackCount = (itemTemplate.Count == 0 ? 1 : itemTemplate.Count);
                 checked
                 {
                     try
@@ -669,7 +680,7 @@ namespace LogicServer.Controllers
                         {
 
                             curBagCell -= value.OnSpace;  //去除原先占用的格子
-                            if (itemTemplate.Count == 1)
+                            if (stackCount == 1)
                             {
 
 
@@ -679,14 +690,14 @@ namespace LogicServer.Controllers
                             {
 
                                 value.CurCount += b.Value;    //当前数量
-                                value.OnSpace = (value.CurCount / itemTemplate.Count) + 1;
+                                value.OnSpace = (value.CurCount / stackCount) + 1;
                             }
                             curBagCell += value.OnSpace;  //更新加入物品后的格子
                         }
                         else
                         {
                             Model.Data.General.Item i = new Model.Data.General.Item();
-                            if (itemTemplate.Count == 1)
+                            if (stackCount == 1)
                             {
 
                                 i.OnSpace = i.CurCount = b.Value;   //当前数量和空间
@@ -695,7 +706,7 @@ namespace LogicServer.Controllers
                             {
 
                                 i.CurCount += b.Value;
-                                i.OnSpace = (i.CurCount / itemTemplate.Count) + 1;
+                                i.OnSpace = (i.CurCount / stackCount) + 1;
                             }
                             curBagCell += i.OnSpace;  //更新加入物品后的格子
                             roleBg.Items.Add(b.Key, i);
@@ -776,16 +787,17 @@ namespace LogicServer.Controllers
             {
                 return false;
             }
+            var stackCount = (item.Count == 0 ? 1 : item.Count);
             if (roleBg.Items.TryGetValue(itemId, out Model.Data.General.Item value))
             {//有同类物品
-                if (item.Count == 1)    //不可叠加
+                if (stackCount == 1)    //不可叠加
                 {
                     newOnSpace += count;
                 }
                 else
                 {   //可叠加
                     var oldSpace = value.OnSpace;    //旧的占用空间
-                    var curSpace = (value.CurCount + count) / item.Count;   //物品增加后占用空间
+                    var curSpace = (value.CurCount + count) / stackCount;   //物品增加后占用空间
                     if (curSpace > oldSpace)
                     {
                         newOnSpace += (curSpace - oldSpace);
@@ -794,13 +806,13 @@ namespace LogicServer.Controllers
             }
             else
             {
-                if (item.Count == 1)
+                if (stackCount == 1)
                 {
                     newOnSpace += count;
                 }
                 else
                 {
-                    newOnSpace = count / item.Count;   //物品增加后占用空间
+                    newOnSpace = count / stackCount;   //物品增加后占用空间
                 }
             }
             if ((newOnSpace + roleBg.CurUsedCell) > roleBg.MaxCellNumber)
@@ -903,7 +915,7 @@ namespace LogicServer.Controllers
                 }
                 await BagDataHelper.Instance.UpdateBagByRoleId(bgInfo, LogicServer.User.role.Id);
 
-                await MsgSender.Instance.GoldUpdate(money.CurrencyID);
+                await MsgSender.Instance.UpdateGold(money.CurrencyID);
 
                 FinanceLogData loginfo = new FinanceLogData()
                 {
@@ -996,6 +1008,8 @@ namespace LogicServer.Controllers
                             role.SocialStatus -= (item.Status * count);
                             shenjia = -(item.Status * count);
                         }
+                        var newCount = i.CurCount - count;
+                        i.CurCount = newCount;         //重新计算数量
                     }
                     else
                     {

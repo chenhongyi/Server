@@ -35,7 +35,7 @@ namespace LogicServer.Controllers
                 await FinanceLogController.Instance.UpdateFinanceLog(role.Id, log, tx);
                 await tx.CommitAsync();
             }
-            await MsgSender.Instance.GoldUpdate(config.CostGold.Type);
+            await MsgSender.Instance.UpdateGold(config.CostGold.Type);
             await MsgSender.Instance.UpdateIncome();  //更新身价
             await MsgSender.Instance.FinanceLogUpdate(log);
         }

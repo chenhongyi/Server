@@ -63,7 +63,7 @@ namespace LogicServer.Controllers
                 await tx.CommitAsync();
             }
             await MsgSender.Instance.UpdateIncome();    //发送身价变动消息
-            await MsgSender.Instance.GoldUpdate(goldType);                                                            //发送金钱变动消息
+            await MsgSender.Instance.UpdateGold(goldType);                                                            //发送金钱变动消息
             await MsgSender.Instance.FinanceLogUpdate(log);
 
 

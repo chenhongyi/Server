@@ -13,7 +13,7 @@ namespace Model.Protocol
     [ProtoContract]
     public class RoomReq
     {
-        [ProtoMember(1)] public string Id { get; set; }
+        [ProtoMember(1)] public string RoleId { get; set; }
     }
 
     /// <summary>
@@ -22,19 +22,80 @@ namespace Model.Protocol
     [ProtoContract]
     public class RoomResult : BaseResponseData
     {
-        [ProtoMember(1)] public string Id { get; set; }
+        [ProtoMember(1)] public string RoleId { get; set; }
         [ProtoMember(2)] public int RoomId { get; set; }
-        [ProtoMember(3)] public List<RoomFurConfig> Config { get; set; }
+        [ProtoMember(3)] public Dictionary<int, int> Config { get; set; }
     }
 
+    /// <summary>
+    /// 请求更新房间配置
+    /// </summary>
     [ProtoContract]
-    public class RoomFurConfig
+    public class RoomConfigUpdateReq
     {
-        [ProtoMember(1)] public int key { get; set; }
-        [ProtoMember(2)] public int itemId { get; set; }
-        public RoomFurConfig(int key, int itemId)
-        {
-            this.key = key; this.itemId = itemId;
-        }
+        [ProtoMember(3)] public Dictionary<int, int> Config { get; set; }
+    }
+
+    /// <summary>
+    /// 请求更新房间配置
+    /// </summary>
+    [ProtoContract]
+    public class RoomConfigUpdateResult : BaseResponseData
+    {
+        [ProtoMember(3)] public Dictionary<int, int> Config { get; set; }
+    }
+
+    /// <summary>
+    /// 房间购买/升级
+    /// </summary>
+    [ProtoContract]
+    public class RoomBuyReq
+    {
+        [ProtoMember(1)] public int roomId { get; set; }
+    }
+
+    /// <summary>
+    /// 房间购买/升级
+    /// </summary>
+    [ProtoContract]
+    public class RoomBuyResult : BaseResponseData
+    {
+        [ProtoMember(1)] public int roomId { get; set; }
+    }
+
+    /// <summary>
+    /// 房间出售
+    /// </summary>
+    [ProtoContract]
+    public class RoomSellReq
+    {
+
+    }
+
+    /// <summary>
+    /// 房间出售
+    /// </summary>
+    [ProtoContract]
+    public class RoomSellResult : BaseResponseData
+    {
+
+    }
+
+    /// <summary>
+    /// 拜访用户房间
+    /// </summary>
+    [ProtoContract]
+    public class RoomVisitReq
+    {
+        [ProtoMember(1)] public string RoleId { get; set; }
+    }
+
+    /// <summary>
+    /// 拜访用户房间
+    /// </summary>
+    [ProtoContract]
+    public class RoomVisitResult : BaseResponseData
+    {
+        [ProtoMember(1)] public RoomResult Room { get; set; }
     }
 }

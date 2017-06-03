@@ -10,7 +10,7 @@ namespace Model.Data.Npc
     [DataContract]
     public class Room
     {
-        [DataMember] public string Id { get; set; }
+        [DataMember] public string RoleId { get; set; }
         /// <summary>
         /// 当前使用的房间
         /// </summary>

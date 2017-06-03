@@ -10,24 +10,28 @@ namespace Model.Data.Business
     [DataContract]
     public class BuildData
     {
-        public BuildData(string name, int shopType, int pos)
+        public BuildData(Guid roleId, string name, int shopType, int pos)
         {
-            var config = AutoData.Building.GetForId(shopType);
+            var configBuild = AutoData.Building.GetForId(shopType);
+            var configBuildLevel = AutoData.BuildingLevel.GetForId(1);
             this.Id = Guid.NewGuid().ToString();
-            this.ShopType = shopType;
+            this.BuildType = shopType;
             this.Name = name;
             this.TodayCanAdvartise = 0;
             this.Level = 1;
-            this.Popularity = 1;
-            this.Star = 1;
-            this.Employee = 0;
+            this.Popularity = configBuildLevel.Popularity;
+            this.Star = 0;  //	扩建使用星表示，一共最多5颗星初始0星。
+            this.Employee = configBuildLevel.ClerkNums; //员工数量
             this.GetMoney = 0;
-            this.Income = config.Income;
+            this.Income = configBuild.Income;
             this.Pos = pos;
+            this.RoleId = roleId.ToString();
+            this.CustomerAddtion = configBuildLevel.CustomerAddtion;
         }
 
         [DataMember] public string Id { get; set; }
-        [DataMember] public int ShopType { get; set; }
+        [DataMember] public int BuildType { get; set; }
+        [DataMember] public string RoleId { get; set; }
 
         /// <summary>
         /// 名字
@@ -73,6 +77,12 @@ namespace Model.Data.Business
         /// 在该建筑商消耗掉的金砖
         /// </summary>
         [DataMember] public long CostGold { get; set; } = 0;
+
+        /// <summary>
+        /// 基础客流
+        /// </summary>
+        [DataMember] public int CustomerAddtion { get; set; } = 0;
+
 
     }
 }

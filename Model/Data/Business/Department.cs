@@ -47,28 +47,28 @@ namespace Model.Data.Business
                     break;
                 case DepartMentType.Personnel:  //人事部初始化数值
                     department = DepartmentInfo.GetForId(100001);
-                    this.CurTalentLv = 20;
+                    this.CurTalentLv = department.TalentLvLimit;
                     break;
                 case DepartMentType.Market:     //市场部初始化数值
                     department = DepartmentInfo.GetForId(120001);
-                    this.CurStoreAddtion = 20.00f;
+                    this.CurStoreAddtion = department.StoreAddtion;
                     break;
                 case DepartMentType.Investment: //投资部初始化数值
                     department = DepartmentInfo.GetForId(110001);
+                    this.CurExtension = department.ExtensionLimit;
                     break;
             }
             this.Id = Guid.NewGuid();
             this.Type = type;
             this.Level = department.level;
-            this.MakerCoinCounts = 1;
-            this.CurPurchaseCounts = 1;
-            this.CurStrategicCounts = 1;
-            this.CurStore = 10;
-            this.CurStaff = 10;
-            this.CurRealestate = 10;
-            this.CurPropagandaCounts = 1;
-            this.CurExtension = 10;
-            this.CurDirectorCounts = 20;
+            this.MakerCoinCounts = 0;
+            this.CurPurchaseCounts = 0;
+            this.CurStrategicCounts = 0;
+            this.CurStore = 0;
+            this.CurStaff = 0;
+            this.CurRealestate = 0;
+            this.CurPropagandaCounts = 0;
+            this.CurDirectorCounts = 0;
         }
 #else
 
@@ -136,7 +136,7 @@ namespace Model.Data.Business
         /// </summary>
         [DataMember] public int CurStore { get; set; }
         /// <summary>
-        /// 当前扩建星级 投资部
+        /// 当前扩建等级 投资部
         /// </summary>
         [DataMember] public int CurExtension { get; set; }
         /// <summary>

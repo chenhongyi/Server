@@ -78,9 +78,37 @@
         /// </summary>
         UseItemReq = 1010,
         /// <summary>
+        /// 店铺扩建
+        /// </summary>
+        BuildExtendReq = 1023,
+        /// <summary>
+        /// 建筑升级
+        /// </summary>
+        BuildLvUpReq = 1022,
+        /// <summary>
+        /// 道具购买
+        /// </summary>
+        ItemBuyReq = 1017,
+        /// <summary>
         /// 客户端请求用户的房间信息
         /// </summary>
         RoomReq = 1014,
+        /// <summary>
+        /// 请求更新房间配置
+        /// </summary>
+        RoomConfigUpdateReq = 1018,
+        /// <summary>
+        ///升级
+        /// </summary>
+        RoomBuyReq = 1019,
+        /// <summary>
+        /// 房间出售
+        /// </summary>
+        RoomSellReq = 1020,
+        /// <summary>
+        /// 拜访用户房间
+        /// </summary>
+        RoomVisitReq = 1021,
     }
     /// <summary>
     /// 服务器返回消息定义
@@ -88,9 +116,65 @@
     public enum WSResponseMsgID
     {
         /// <summary>
+        /// 店铺扩建成功
+        /// </summary>
+        BuildExtendResult = 1032,
+        /// <summary>
+        /// 店铺扩建失败
+        /// </summary>
+        BuildExtendFailedResult = 1033,
+        /// <summary>
+        /// 建筑升级
+        /// </summary>
+        BuildLvUpResult = 1031,
+        /// <summary>
+        /// 建筑升级
+        /// </summary>
+        BuildLvUpFailedResult = 1038,
+        /// <summary>
+        /// 道具购买返回
+        /// </summary>
+        ItemBuyResult = 1025,
+        /// <summary>
+        /// 道具更新
+        /// </summary>
+        UpdateItemResult = 1030,
+        /// <summary>
         /// 返回给客户端的房间信息
         /// </summary>
         RoomResult = 1022,
+        /// <summary>
+        /// 请求更新房间配置
+        /// </summary>
+        RoomConfigUpdateResult = 1026,
+        /// <summary>
+        ///升级
+        /// </summary>
+        RoomBuyResult = 1027,
+        /// <summary>
+        /// 房间出售
+        /// </summary>
+        RoomSellResult = 1028,
+        /// <summary>
+        /// 拜访用户房间
+        /// </summary>
+        RoomVisitResult = 1029,
+        /// <summary>
+        /// 更新部门投资部
+        /// </summary>
+        TCDepartmentInvestmentResult = 1034,
+        /// <summary>
+        /// 更新部门财务部
+        /// </summary>
+        TCDepartmentFinanceResult = 1035,
+        /// <summary>
+        /// 更新部门 人事部
+        /// </summary>
+        TCDepartmentPersonnelResult = 1036,
+        /// <summary>
+        /// 更新部门 市场部
+        /// </summary>
+        TCDepartmentMarketResult = 1037,
         /// <summary>
         /// 添加道具进背包返回
         /// </summary>

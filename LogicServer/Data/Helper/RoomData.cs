@@ -14,24 +14,26 @@ namespace LogicServer.Data.Helper
         /// <summary>
         /// 通过角色id获取角色背包信息
         /// </summary>
-        public async Task<Model.Data.Npc.Room> GetRoomData(IReliableStateManager sm, Guid roleId)
+        public async Task<Model.Data.Npc.Room> GetRoomData()
         {
+            var sm = LogicServer.Instance.StateManager;
             var db = await GetGuid(sm);
             using (var tx = sm.CreateTransaction())
             {
-                var box = await db.TryGetValueAsync(tx, roleId);
+                var box = await db.TryGetValueAsync(tx, LogicServer.User.role.Id);
                 return box.HasValue ? box.Value : null;
             }
         }
         /// <summary>
         /// 更新角色房间信息
         /// </summary>
-        public async Task UpdateRoomData(IReliableStateManager sm, Guid roleId, Model.Data.Npc.Room data)
+        public async Task UpdateRoomData(Model.Data.Npc.Room data)
         {
+            var sm = LogicServer.Instance.StateManager;
             var db = GetGuid(sm).Result;
             using (var tx = sm.CreateTransaction())
             {
-                await db.SetAsync(tx, roleId, data);
+                await db.SetAsync(tx, LogicServer.User.role.Id, data);
                 await tx.CommitAsync();
             }
         }

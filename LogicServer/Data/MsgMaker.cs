@@ -28,6 +28,13 @@ namespace LogicServer.Data
             return await InitHelpers.GetMse().SerializeAsync(result);
         }
 
+
+        public static async Task SendMessage(WSResponseMsgID msgId, BaseResponseData result, int roleCount = 1)
+        {
+            var data = await InitHelpers.GetPse().SerializeAsync(result);
+            await SendMessage(msgId, roleCount, data);
+        }
+
         public static async Task SendMessage(WSResponseMsgID msgId, int roleCount, byte[] data)
         {
             MsgQueueList msg = new MsgQueueList();

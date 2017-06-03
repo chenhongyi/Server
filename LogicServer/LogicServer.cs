@@ -206,7 +206,12 @@ namespace LogicServer
             { WSRequestMsgID.DestoryBuildReq,new RequestMsg(){ send = WSResponseMsgID.DestoryBuildResult,handle = DestoryBuild,ndAccount = false} },//摧毁店铺
 
             { WSRequestMsgID.RoomReq, new RequestMsg(){ send = WSResponseMsgID.RoomResult, handle = RoomController.Instance.GetRoom } },
-
+            { WSRequestMsgID.RoomConfigUpdateReq, new RequestMsg(){ send = WSResponseMsgID.RoomConfigUpdateResult, handle = RoomController.Instance.OnRoomConfigUpdateReq } },
+            { WSRequestMsgID.RoomBuyReq, new RequestMsg(){ send = WSResponseMsgID.RoomBuyResult, handle = RoomController.Instance.OnRoomBuyReq } },
+            { WSRequestMsgID.RoomSellReq, new RequestMsg(){ send = WSResponseMsgID.RoomSellResult, handle = RoomController.Instance.OnRoomSellReq } },
+            { WSRequestMsgID.RoomVisitReq, new RequestMsg(){ send = WSResponseMsgID.RoomVisitResult, handle = RoomController.Instance.OnRoomVisitReq } },
+            { WSRequestMsgID.BuildLvUpReq,new RequestMsg(){ send = WSResponseMsgID.BuildLvUpResult,handle = BuildController.Instance.OnBuildLvUp} },
+            { WSRequestMsgID.BuildExtendReq,new RequestMsg(){ send = WSResponseMsgID.BuildExtendResult,handle=BuildController.Instance.OnBuildExtend} },
             #if DEBUG   
             { WSRequestMsgID.AddItemReq,new RequestMsg(){send=WSResponseMsgID.AddItemResult,handle=AddItem,ndAccount=false} }, //添加道具
             //{ },
@@ -581,10 +586,11 @@ namespace LogicServer
         {
             var result = new JoinGameResult();
             var data = new JoinGameReq();
-            string sessionId = User.sessionId;
-            if (User.bytes != null)
+            var selfUser = User;
+            string sessionId = selfUser.sessionId;
+            if (selfUser.bytes != null)
             {
-                data = await InitHelpers.GetPse().DeserializeAsync<JoinGameReq>(User.bytes);
+                data = await InitHelpers.GetPse().DeserializeAsync<JoinGameReq>(selfUser.bytes);
                 if (data == null)
                 {
                     //请求参数为空
@@ -640,6 +646,7 @@ namespace LogicServer
                         UserAttrID = item.UserAttrID
                     });
                 }
+                selfUser.role = user;
                 //Load Bag info
                 var bagInfo = await BagDataHelper.Instance.GetBagByRoleId(roleId);
                 result.CompanyInfo = await CompanyController.Instance.GetCompanyInfoByRoleId(roleId);

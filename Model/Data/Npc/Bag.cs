@@ -29,18 +29,18 @@ namespace Model.Data.Npc
 
             this.Items.Add(1, new Item()//钞票
             {
-                CurCount = 100000,
+                CurCount = 9000000,
                 OnSpace = 0
             });
             this.Items.Add(2, new Item()//金砖
             {
                 OnSpace = 0,
-                CurCount = 100000
+                CurCount = 9000000
             });
             this.Items.Add(3, new Item()//创客币
             {
                 OnSpace = 0,
-                CurCount = 100000
+                CurCount = 9000000
             });
 
             {

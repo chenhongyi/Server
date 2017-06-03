@@ -119,7 +119,9 @@ namespace LogicServer.Controllers
                         PosX = i.Value.PosX,
                         PoxY = i.Value.PoxY,
                         State = i.Value.State,
-                        RoleId = i.Value.RoleId
+                        RoleId = i.Value.RoleId,
+                        BuildId = i.Value.ShopId
+
                     });
                 }
                 return list;
@@ -130,7 +132,7 @@ namespace LogicServer.Controllers
 
         public async Task<BaseResponseData> BuyLand(int pos, BuyLandResult result)
         {
-            if (pos > MaxPosValue)
+            if (pos > MaxPosValue || pos < 0)
             {
                 result.Result = GameEnum.WsResult.ParamsError;
                 return result;
@@ -206,7 +208,7 @@ namespace LogicServer.Controllers
             result.RoleId = land.RoleId;
 
             await MsgSender.Instance.UpdateIncome();  //更新身价
-            await MsgSender.Instance.GoldUpdate(config.Price.CurrencyID);
+            await MsgSender.Instance.UpdateGold(config.Price.CurrencyID);
             await MsgSender.Instance.FinanceLogUpdate(log);
             return result;
 
