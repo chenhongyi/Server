@@ -160,6 +160,10 @@
         /// </summary>
         RoomVisitResult = 1029,
         /// <summary>
+        /// 店铺信息更新消息
+        /// </summary>
+        TCBuildUpdateResult = 1040,
+        /// <summary>
         /// 更新部门投资部
         /// </summary>
         TCDepartmentInvestmentResult = 1034,

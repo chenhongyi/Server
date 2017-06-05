@@ -43,5 +43,17 @@ namespace Model.ResponseData
         [ProtoMember(10)] public int Pos { get; set; }
         [ProtoMember(11)] public string RoleId { get; set; }
         [ProtoMember(12)] public int CustomerAddtion { get; set; }
+        [ProtoMember(13)] public int CurExtendLv { get; set; }
+        [ProtoMember(14)] public int Income { get; set; }
+        [ProtoMember(15)] public long CostGold { get; set; }
     }
 }
+
+
+
+
+
+
+
+
+

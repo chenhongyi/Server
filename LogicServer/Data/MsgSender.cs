@@ -16,17 +16,17 @@ using Model.Data.Npc;
 
 namespace LogicServer.Data
 {
-    public class MsgSender : BaseInstance<MsgSender>
+    public  class MsgSender : BaseInstance<MsgSender>
     {
 
-        public async Task ItemUpdate(int itemId, long count)
+        public  async Task ItemUpdate(int itemId, long count)
         {
             var result = new UpdateItemResult() { Items = new List<ItemInfoCls>() { new ItemInfoCls() { ItemId = itemId, Count = count } } };
             await MsgMaker.SendMessage(WSResponseMsgID.UpdateItemResult, result);
         }
 
 
-        public async Task UseItem(int itemId, long count)
+        public  async Task UseItem(int itemId, long count)
         {
             var result = await Controllers.BagController.Instance.UseItemsAsync(null, Guid.Empty, itemId, count);
             await MsgMaker.SendMessage(WSResponseMsgID.AddItemResult, result);
@@ -41,7 +41,7 @@ namespace LogicServer.Data
         /// <param name="count"></param>
         /// <param name="type"></param>
         /// <returns></returns>
-        public async Task UpdateGold(int type)
+        public  async Task UpdateGold(int type)
         {
 
             GoldChangedResult result = new GoldChangedResult()
@@ -65,7 +65,7 @@ namespace LogicServer.Data
         /// </summary>
         /// <param name="income"></param>
         /// <returns></returns>
-        public async Task UpdateIncome()
+        public  async Task UpdateIncome()
         {
             UpdateShenjiaResult result = new UpdateShenjiaResult();
             result.SocialStatus = LogicServer.User.role.SocialStatus;
@@ -74,14 +74,14 @@ namespace LogicServer.Data
         }
 
 
-        public async Task BuildExtendFailed(BuildExtendFailedResult result)
+        public  async Task BuildExtendFailed(BuildExtendFailedResult result)
         {
             var data = await InitHelpers.GetPse().SerializeAsync(result);
             await MsgMaker.SendMessage(WSResponseMsgID.BuildExtendFailedResult, 1, data);
         }
 
 
-        public async Task FinanceLogUpdate(FinanceLogData log)
+        public  async Task FinanceLogUpdate(FinanceLogData log)
         {
             TCFinanceLogChangedResult result = new TCFinanceLogChangedResult()
             {
@@ -106,7 +106,7 @@ namespace LogicServer.Data
         /// <param name="department"></param>
         /// <returns></returns>
 
-        public async Task UpdateDepartmentInvestment(Department department)
+        public  async Task UpdateDepartmentInvestment(Department department)
         {
             TCDepartmentInvestmentResult result = new TCDepartmentInvestmentResult()
             {
@@ -124,10 +124,41 @@ namespace LogicServer.Data
             await MsgMaker.SendMessage(WSResponseMsgID.TCDepartmentInvestmentResult, 1, data);
         }
 
-        public async Task BuildLvUpFailed(BuildLvUpFailedResult failed)
+        public  async Task BuildLvUpFailed(BuildLvUpFailedResult failed)
         {
             var data = await InitHelpers.GetPse().SerializeAsync(failed);
             await MsgMaker.SendMessage(WSResponseMsgID.BuildLvUpFailedResult, 1, data);
+        }
+
+        public  async Task UpdateBuildInfo(BuildData buildData)
+        {
+            if (buildData != null)
+            {
+                TCBuildUpdateResult result = new TCBuildUpdateResult()
+                {
+                    LandBuildInfo = new LoadBuildInfo()
+                    {
+                        BuildId = buildData.Id,
+                        BuildType = buildData.BuildType,
+                        CurExtendLv = buildData.CurExtendLv,
+                        CustomerAddtion = buildData.CustomerAddtion,
+                        Employee = buildData.Employee,
+                        GetMoney = buildData.GetMoney,
+                        Level = buildData.Level,
+                        Name = buildData.Name,
+                        Popularity = buildData.Popularity,
+                        Pos = buildData.Pos,
+                        RoleId = buildData.RoleId,
+                        Star = buildData.Star,
+                        TodayCanAdvartise = buildData.TodayCanAdvartise,
+                        CostGold = buildData.CostGold,
+                        Income = buildData.Income
+
+                    }
+                };
+                var data = await InitHelpers.GetPse().SerializeAsync(result);
+                await MsgMaker.SendMessage(WSResponseMsgID.TCBuildUpdateResult, 1, data);
+            }
         }
     }
 }

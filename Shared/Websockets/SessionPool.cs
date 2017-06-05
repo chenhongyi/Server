@@ -2,20 +2,33 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Shared.Websockets
 {
-     public  class SessionPool: BaseInstance<SessionPool>
+    public class SessionPool
     {
+        private static readonly SessionPool instance = new SessionPool();
+        static SessionPool() { }
+        private SessionPool() { }
+        public static SessionPool Instance
+        {
+            get
+            {
+                return instance;
+            }
+        }
         static Dictionary<string, WebSocketSession> _sessions;
-        private Dictionary<string, WebSocketSession> sessions
+        Dictionary<string, WebSocketSession> sessions
         {
             get
             {
                 if (_sessions == null)
+                {
                     _sessions = new Dictionary<string, WebSocketSession>();
+                }
                 return _sessions;
             }
         }

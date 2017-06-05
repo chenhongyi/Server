@@ -82,6 +82,7 @@ namespace Model.Data.Business
         /// 基础客流
         /// </summary>
         [DataMember] public int CustomerAddtion { get; set; } = 0;
+        [DataMember] public int CurExtendLv { get; set; } = 1;  //当前扩建等级
 
 
     }

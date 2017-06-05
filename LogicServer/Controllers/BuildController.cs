@@ -21,7 +21,7 @@ namespace LogicServer.Controllers
         private const int MaxPosLength = 100;   //每次请求数据长度
         private const int MaxPosValue = 1001000;   //请求的参数最大值 超出这个数值属于伪造  x*1000+y的最大值 
 
-        public async Task CreateBuild(Guid roleId, int pos, BuildData build, int moneyCount, int moneyType)
+        public  async Task CreateBuild(Guid roleId, int pos, BuildData build, int moneyCount, int moneyType)
         {
             try
             {
@@ -141,7 +141,11 @@ namespace LogicServer.Controllers
                             Star = build.Star,
                             TodayCanAdvartise = build.TodayCanAdvartise,
                             Pos = build.Pos,
-                            RoleId = build.RoleId
+                            RoleId = build.RoleId,
+                            CurExtendLv = build.CurExtendLv,
+                            CustomerAddtion = build.CustomerAddtion,
+                            CostGold = build.CostGold,
+                            Income = build.Income
                         });
                     }
                 }
@@ -166,7 +170,11 @@ namespace LogicServer.Controllers
                     Star = build.Star,
                     TodayCanAdvartise = build.TodayCanAdvartise,
                     Pos = build.Pos,
-                    RoleId = build.RoleId
+                    RoleId = build.RoleId,
+                    CustomerAddtion = build.CustomerAddtion,
+                    CurExtendLv = build.CurExtendLv,
+                    CostGold = build.CostGold,
+                    Income = build.Income
                 };
                 return info;
             }
@@ -307,8 +315,7 @@ namespace LogicServer.Controllers
                     await MsgSender.Instance.BuildExtendFailed(result);
                     return null;
                 }
-                var department = await DepartmentGroupDataHelper.Instance.GetDepartMentGroupByRoleId(roleId);   //部门
-                var curExtendLevel = department.Investment.CurExtension;    //当前扩建星级
+                var curExtendLevel = build.CurExtendLv;//当前扩建星级
                 var config = AutoData.Extension.GetForId(curExtendLevel);
                 if (config == null)
                 {
@@ -331,7 +338,7 @@ namespace LogicServer.Controllers
                     await MsgSender.Instance.BuildExtendFailed(result);
                     return null;
                 }
-                var info = await BuildExtend(build, config, department);
+                var info = await BuildExtend(build, config);
                 return info;
             }
             return null;
@@ -343,13 +350,13 @@ namespace LogicServer.Controllers
         /// <param name="build"></param>
         /// <param name="config"></param>
         /// <returns></returns>
-        private async Task<LoadBuildInfo> BuildExtend(BuildData build, AutoData.Extension config, DepartmentGroup department)
+        private async Task<LoadBuildInfo> BuildExtend(BuildData build, AutoData.Extension config)
         {
             var role = LogicServer.User.role;
 
             using (var tx = LogicServer.Instance.StateManager.CreateTransaction())
             {
-                department.Investment.CurExtension++;   //扩建等级提升
+                build.CurExtendLv++;
                 build.Employee += config.ClerkAddtion;
                 build.CustomerAddtion += config.CustomerAddtion;
                 build.Star++;
@@ -358,12 +365,10 @@ namespace LogicServer.Controllers
                 await BagDataHelper.Instance.DecGold(config.UpgradeCost.Count, config.UpgradeCost.CurrencyID, tx);  //扣钱
                 await RoleDataHelper.Instance.UpdateRoleByRoleIdAsync(role.Id, role, tx);                           //更新用户身价
                 await BuildDataHelper.Instance.UpdateBuildByBuildId(build, tx);                                        //更新建筑
-                await DepartmentGroupDataHelper.Instance.UpdateDepartMentGroupByRoleId(role.Id, department, tx);        //更新部门
                 await tx.CommitAsync();
             }
             await MsgSender.Instance.UpdateGold(config.UpgradeCost.CurrencyID);
             await MsgSender.Instance.UpdateIncome();
-            await MsgSender.Instance.UpdateDepartmentInvestment(department.Investment);
             LoadBuildInfo info = new LoadBuildInfo()
             {
                 BuildId = build.Id,
@@ -377,7 +382,10 @@ namespace LogicServer.Controllers
                 RoleId = build.RoleId,
                 Star = build.Star,
                 TodayCanAdvartise = build.TodayCanAdvartise,
-                CustomerAddtion = build.CustomerAddtion
+                CustomerAddtion = build.CustomerAddtion,
+                CurExtendLv = build.CurExtendLv,
+                CostGold = build.CostGold,
+                Income = build.Income
             };
             return info;
         }
@@ -474,14 +482,7 @@ namespace LogicServer.Controllers
                 await MsgSender.Instance.BuildLvUpFailed(failed);
                 return null;
             }
-            var department = await DepartmentGroupDataHelper.Instance.GetDepartMentGroupByRoleId(role.Id);
-            if (department == null)
-            {
-                failed.Result = GameEnum.WsResult.DepartmentInvalid;
-                await MsgSender.Instance.BuildLvUpFailed(failed);
-                return null;
-            }
-            var extendConfig = AutoData.Extension.GetForId(department.Investment.CurExtension + 1); //取扩建等级下一级的 needlv的值 作为升级上限
+            var extendConfig = AutoData.Extension.GetForId(build.CurExtendLv + 1); //取扩建等级下一级的 needlv的值 作为升级上限
             if (build.Level + 1 > extendConfig.NeedLv)
             {
                 failed.Result = GameEnum.WsResult.NeedExtendLevel;
@@ -518,7 +519,12 @@ namespace LogicServer.Controllers
                 Pos = build.Pos,
                 RoleId = build.RoleId,
                 Star = build.Star,
-                TodayCanAdvartise = build.TodayCanAdvartise
+                TodayCanAdvartise = build.TodayCanAdvartise,
+                CurExtendLv = build.CurExtendLv,
+                CostGold = build.CostGold,
+                Income = build.Income
+
+
             };
             return info;
         }
